@@ -10,8 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "konva": "^10.0.12",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "react-konva": "^19.2.0",
+    "react-konva-utils": "^2.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
