@@ -1,21 +1,16 @@
 import { useCircuit } from "../../context/circuit/useCircuit";
-import { updateElement } from "../../functions/updateElement";
+import DCSourceShape from "../../shapes/dc-source/DCSourceShape";
 import ResistorShape from "../../shapes/resistor/ResistorShape";
-import type { ComponentId } from "../../types/circuit";
 
 function ElementSwitcher() {
-	const { elements, setElements } = useCircuit();
-
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const handleUpdate = (id: ComponentId, newAttrs: any) => {
-		return updateElement(id, newAttrs, setElements);
-	};
+	const { elements } = useCircuit();
 
 	return elements.map((el) => {
 		if (el.kind === "resistor") {
-			return (
-				<ResistorShape key={el.id} data={el} onUpdate={handleUpdate} />
-			);
+			return <ResistorShape key={el.id} data={el} />;
+		}
+		if (el.kind === "dc-source") {
+			return <DCSourceShape key={el.id} data={el} />;
 		}
 		return null;
 	});

@@ -31,7 +31,7 @@ export interface Inductor extends BaseComponent {
 }
 
 export interface DCSource extends BaseComponent {
-	kind: "dcSource";
+	kind: "dc-source";
 	voltage: number; // in volts
 }
 

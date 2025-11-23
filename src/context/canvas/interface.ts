@@ -5,8 +5,8 @@ export interface CanvasStateContext {
 	setIsDrawing: (drawing: boolean) => void;
 	mode: Mode;
 	setMode: (mode: Mode) => void;
-	component: string | null;
-	setComponent: (component: string | null) => void;
+	drawComponent: string | null;
+	setDrawComponent: (component: string | null) => void;
 	gridSize: number;
 	setGridSize: (size: number) => void;
 }

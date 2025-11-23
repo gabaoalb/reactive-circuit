@@ -6,15 +6,14 @@ import { useCanvas } from "../../context/canvas/useCanvas";
 import { dragBoundariesFunc } from "../../functions/dragBoundariesFunc";
 import { cursorStyle } from "../../functions/cursorStyle";
 import { snapGrid } from "../../functions/snapGrid";
-import type { ComponentId, Resistor } from "../../types/circuit";
-import type { KonvaEventObject } from "konva/lib/Node";
+import type { ComponentId, DCSource, Resistor } from "../../types/circuit";
 import ElementSwitcher from "../element-switcher/ElementSwitcher";
 import { useCircuit } from "../../context/circuit/useCircuit";
 
 function Canvas() {
 	const stageRef = useRef<StageType | null>(null);
 
-	const { mode, gridSize } = useCanvas();
+	const { mode, gridSize, drawComponent } = useCanvas();
 	const { elements, setElements } = useCircuit();
 
 	useEffect(() => {
@@ -22,8 +21,7 @@ function Canvas() {
 		if (!stage) return;
 
 		// Handler para começar (agora apenas marca o início, não cria o componente)
-		const handleMouseDown = (e: KonvaEventObject<MouseEvent>) => {
-			console.debug("e:", e);
+		const handleMouseDown = () => {
 			if (mode === "move") return;
 
 			const pos = stage.getPointerPosition();
@@ -36,18 +34,34 @@ function Canvas() {
 
 			const newId = crypto.randomUUID() as ComponentId;
 
-			const newResistor: Resistor = {
-				id: newId,
-				kind: "resistor",
-				pointA: snappedPos,
-				pointB: { x: snappedPos.x + 100, y: snappedPos.y },
-				rotation: 0,
-				resistance: 1000,
-				label: `R${
-					elements.filter((e) => e.kind === "resistor").length + 1
-				}`
-			};
-			setElements((prev) => [...prev, newResistor]);
+			if (drawComponent === "resistor") {
+				const newResistor: Resistor = {
+					id: newId,
+					kind: "resistor",
+					pointA: snappedPos,
+					pointB: { x: snappedPos.x + 100, y: snappedPos.y },
+					rotation: 0,
+					resistance: 1000,
+					label: `R${
+						elements.filter((e) => e.kind === "resistor").length + 1
+					}`
+				};
+				setElements((prev) => [...prev, newResistor]);
+			} else if (drawComponent === "dc-source") {
+				const newDCSource: DCSource = {
+					id: newId,
+					kind: "dc-source",
+					pointA: snappedPos,
+					pointB: { x: snappedPos.x + 100, y: snappedPos.y },
+					rotation: 0,
+					voltage: 5,
+					label: `V${
+						elements.filter((e) => e.kind === "dc-source").length +
+						1
+					}`
+				};
+				setElements((prev) => [...prev, newDCSource]);
+			}
 		};
 
 		stage.on("mousedown", handleMouseDown);
@@ -58,7 +72,7 @@ function Canvas() {
 			// stage.off("mousemove", handleMouseMove);
 			// stage.off("mouseup", handleMouseUp);
 		};
-	}, [elements, setElements, gridSize, mode]);
+	}, [mode, gridSize, drawComponent, elements, setElements]);
 
 	return (
 		<Stage

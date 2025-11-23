@@ -1,7 +1,8 @@
 import { useContext } from "react";
 import { CircuitContext } from "./context";
+import type { CircuitStateContext } from "./interface";
 
-export function useCircuit() {
+export function useCircuit(): CircuitStateContext {
 	// Lógica do hook useCircuit aqui
 	const context = useContext(CircuitContext);
 	if (!context) {

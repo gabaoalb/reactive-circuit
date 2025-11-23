@@ -5,7 +5,7 @@ import { CanvasContext } from "./context";
 function CanvasProvider({ children }: { children: React.ReactNode }) {
 	const [isDrawing, setIsDrawing] = useState(false);
 	const [mode, setMode] = useState<Mode>("select");
-	const [component, setComponent] = useState<string | null>(null);
+	const [drawComponent, setDrawComponent] = useState<string | null>(null);
 	const [gridSize, setGridSize] = useState(25);
 
 	return (
@@ -15,8 +15,8 @@ function CanvasProvider({ children }: { children: React.ReactNode }) {
 				setIsDrawing,
 				mode,
 				setMode,
-				component,
-				setComponent,
+				drawComponent,
+				setDrawComponent,
 				gridSize,
 				setGridSize
 			}}

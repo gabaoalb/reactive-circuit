@@ -1,7 +1,7 @@
 export function cursorStyle(mode: string): string {
 	switch (mode) {
 		case "move":
-			return "grab";
+			return "move";
 		case "draw":
 			return "crosshair";
 		case "select":

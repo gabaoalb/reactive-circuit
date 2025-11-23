@@ -1,21 +1,21 @@
 import { useCanvas } from "../../context/canvas/useCanvas";
 
 function Header() {
-	const { setMode, mode, component, setComponent } = useCanvas();
+	const { setMode, mode, drawComponent, setDrawComponent } = useCanvas();
 
 	const handleMoveClick = () => {
 		setMode("move");
-		setComponent(null);
+		setDrawComponent(null);
 	};
 
 	const handleResistorClick = () => {
 		setMode("draw");
-		setComponent("resistor");
+		setDrawComponent("resistor");
 	};
 
 	const handleVoltageSourceClick = () => {
 		setMode("draw");
-		setComponent("dcSource");
+		setDrawComponent("dc-source");
 	};
 
 	return (
@@ -44,8 +44,9 @@ function Header() {
 				style={{
 					marginRight: "10px",
 					padding: "8px 16px",
-					background: component === "resistor" ? "#007bff" : "#fff",
-					color: component === "resistor" ? "#fff" : "#000",
+					background:
+						drawComponent === "resistor" ? "#007bff" : "#fff",
+					color: drawComponent === "resistor" ? "#fff" : "#000",
 					border: "1px solid #ccc",
 					cursor: "pointer"
 				}}
@@ -56,8 +57,9 @@ function Header() {
 				onClick={handleVoltageSourceClick}
 				style={{
 					padding: "8px 16px",
-					background: component === "dcSource" ? "#007bff" : "#fff",
-					color: component === "dcSource" ? "#fff" : "#000",
+					background:
+						drawComponent === "dc-source" ? "#007bff" : "#fff",
+					color: drawComponent === "dc-source" ? "#fff" : "#000",
 					border: "1px solid #ccc",
 					cursor: "pointer"
 				}}
