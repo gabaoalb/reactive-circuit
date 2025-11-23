@@ -11,3 +11,9 @@ Reactive-Circuit is circuit simulation software that allows users to design, sim
 -   Export and import circuit designs in various formats
 -   Scripting support for advanced simulations and custom components
 -   Fully written in TypeScript for type safety and maintainability
+
+## TODO
+
+-   Oscilloscope component
+-   Logic analyzer component
+-   More components (transistors, diodes, ICs, etc.)

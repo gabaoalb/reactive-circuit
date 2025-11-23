@@ -1,18 +1,16 @@
+import type { Vector2d } from "konva/lib/types";
+
 export type ComponentId = string & { readonly brand: unique symbol };
 export type NodeId = string & { readonly brand: unique symbol };
 
 export type TerminalType = "positive" | "negative";
 
-export interface Point {
-	x: number;
-	y: number;
-}
-
 export type Mode = "move" | "draw" | "select" | "erase";
 
 export interface BaseComponent {
 	id: ComponentId;
-	position: Point;
+	pointA: Vector2d;
+	pointB: Vector2d;
 	rotation: number; // in degrees
 	label?: string;
 }

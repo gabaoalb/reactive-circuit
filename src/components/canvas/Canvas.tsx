@@ -39,7 +39,8 @@ function Canvas() {
 			const newResistor: Resistor = {
 				id: newId,
 				kind: "resistor",
-				position: snappedPos,
+				pointA: snappedPos,
+				pointB: { x: snappedPos.x + 100, y: snappedPos.y },
 				rotation: 0,
 				resistance: 1000,
 				label: `R${
