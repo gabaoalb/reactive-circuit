@@ -52,10 +52,19 @@ export function buildElectricalGraph(doc: CircuitDocument): ElectricalGraph {
     return root;
   }
   for (const c of doc.components) {
-    if (!Number.isFinite(c.value) || (c.kind === "resistor" && c.value <= 0))
+    if (c.kind === "switch") {
+      if (typeof c.closed !== "boolean")
+        throw new CircuitError("value", "Estado da chave inválido.", [c.id]);
+      continue;
+    }
+    if (
+      !Number.isFinite(c.value) ||
+      (c.kind !== "voltage" && c.value <= 0) ||
+      ((c.kind === "capacitor" || c.kind === "inductor") && !Number.isFinite(c.initialValue ?? 0))
+    )
       throw new CircuitError(
         "value",
-        `${c.name}: informe ${c.kind === "resistor" ? "resistência positiva" : "tensão"} finita.`,
+        `${c.name}: informe parâmetros físicos válidos e condições iniciais finitas.`,
         [c.id],
       );
   }
@@ -92,12 +101,13 @@ export function buildElectricalGraph(doc: CircuitDocument): ElectricalGraph {
   let changed = true;
   while (changed) {
     changed = false;
-    for (const { a, b } of branches)
-      if (reached.has(a) || reached.has(b)) {
-        if (!reached.has(a) || !reached.has(b)) changed = true;
-        reached.add(a);
-        reached.add(b);
-      }
+    for (const { a, b, component } of branches)
+      if (component.kind !== "switch" || component.closed)
+        if (reached.has(a) || reached.has(b)) {
+          if (!reached.has(a) || !reached.has(b)) changed = true;
+          reached.add(a);
+          reached.add(b);
+        }
   }
   const floating = branches.filter((b) => !reached.has(b.a) || !reached.has(b.b));
   if (floating.length)

@@ -73,9 +73,17 @@ export function CircuitCanvas({ state, dispatch, result }: Props) {
     const raw = event.target.getStage()?.getPointerPosition();
     if (!raw) return;
     const position = snap(raw);
-    if (state.tool === "resistor" || state.tool === "voltage") {
+    if (
+      state.tool === "resistor" ||
+      state.tool === "voltage" ||
+      state.tool === "capacitor" ||
+      state.tool === "inductor" ||
+      state.tool === "switch"
+    ) {
       const kind = state.tool;
-      const prefix = kind === "resistor" ? "R" : "V";
+      const prefix = { resistor: "R", voltage: "V", capacitor: "C", inductor: "L", switch: "S" }[
+        kind
+      ];
       let number = 1;
       while (doc.components.some((c) => c.name === `${prefix}${number}`)) number++;
       dispatch({
@@ -83,8 +91,11 @@ export function CircuitCanvas({ state, dispatch, result }: Props) {
         component: {
           id: id(),
           name: `${prefix}${number}`,
-          kind,
-          value: kind === "resistor" ? 1000 : 5,
+          ...(kind === "switch"
+            ? { kind: "switch" as const, closed: false }
+            : kind === "capacitor" || kind === "inductor"
+              ? { kind, value: kind === "capacitor" ? 15e-6 : 1, initialValue: 0 }
+              : { kind, value: kind === "resistor" ? 1000 : 5 }),
           position: placement(position),
           rotation: 0,
         },
@@ -236,6 +247,7 @@ export function CircuitCanvas({ state, dispatch, result }: Props) {
               onMove={(position) =>
                 dispatch({ type: "move", selection: { kind: "component", id: c.id }, position })
               }
+              onToggle={() => dispatch({ type: "toggle-switch", id: c.id })}
             />
           ))}
         </Layer>

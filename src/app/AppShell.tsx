@@ -124,7 +124,7 @@ export const AppShell = styled("div")(({ theme }) => ({
     color: theme.palette.text.secondary,
     overflowWrap: "anywhere",
   },
-  "& .selection-actions": { display: "flex", gap: 8, marginTop: 12 },
+  "& .selection-actions": { display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 },
   "& .results-placeholder": {
     border: `1px dashed ${theme.palette.divider}`,
     borderRadius: 8,

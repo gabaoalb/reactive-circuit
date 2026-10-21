@@ -21,11 +21,13 @@ import {
   TableCell,
 } from "@mui/material";
 import type { Component } from "../domain/circuit";
+import { formatPhysical } from "../domain/circuit";
 import { CircuitCanvas } from "../editor/CircuitCanvas";
 import { editorReducer, initialState } from "../editor/state";
 import type { Tool } from "../editor/state";
-import { simulateDc } from "../simulation/mna";
 import type { SimulationOutcome } from "../simulation/mna";
+import { useSimulation } from "./useSimulation";
+import type { AnalysisMode } from "./useSimulation";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import { blue, yellow } from "@mui/material/colors";
@@ -36,6 +38,9 @@ const tools: { tool: Tool; label: string; icon: string }[] = [
   { tool: "select", label: "Selecionar", icon: "↖" },
   { tool: "resistor", label: "Resistor", icon: "▭" },
   { tool: "voltage", label: "Fonte DC", icon: "⊕" },
+  { tool: "capacitor", label: "Capacitor", icon: "⊣" },
+  { tool: "inductor", label: "Indutor", icon: "∿" },
+  { tool: "switch", label: "Chave", icon: "⤴" },
   { tool: "wire", label: "Fio", icon: "⌁" },
   { tool: "junction", label: "Junção", icon: "•" },
   { tool: "ground", label: "Terra", icon: "⏚" },
@@ -45,6 +50,9 @@ const instructions: Record<Tool, string> = {
     "Arraste o corpo para mover ou um terminal para esticar. A outra ponta fica fixa; Delete exclui a seleção.",
   resistor: "Clique na grade para adicionar um resistor de 1 kΩ.",
   voltage: "Clique na grade para adicionar uma fonte ideal de 5 V. Porta a = +; porta b = −.",
+  capacitor: "addCapacitorHelp",
+  inductor: "addInductorHelp",
+  switch: "addSwitchHelp",
   wire: "Clique em um terminal ou junção, na grade para cotovelos e em outro terminal para concluir. Escape cancela.",
   junction: "Clique na grade para criar uma junção. Conecte os fios explicitamente a ela.",
   ground: "Clique em um terminal ou junção para definir a referência de 0 V.",
@@ -52,32 +60,68 @@ const instructions: Record<Tool, string> = {
 function Properties({
   component,
   onValue,
+  onInitialValue,
+  onToggle,
 }: {
   component: Component;
   onValue: (value: number) => void;
+  onInitialValue: (value: number) => void;
+  onToggle: () => void;
 }) {
   const { t } = useTranslation();
   const [input, setInput] = useState(String(component.value));
+  const [initialInput, setInitialInput] = useState(
+    String("initialValue" in component ? (component.initialValue ?? 0) : 0),
+  );
+  const reactive = component.kind === "capacitor" || component.kind === "inductor";
+  const initial = Number(initialInput);
   const numeric = Number(input);
   const valid =
     input.trim() !== "" &&
     Number.isFinite(numeric) &&
-    (component.kind !== "resistor" || numeric > 0);
+    (component.kind === "voltage" || numeric > 0) &&
+    (!reactive || (initialInput.trim() !== "" && Number.isFinite(initial)));
+  if (component.kind === "switch")
+    return (
+      <>
+        <h3>
+          {component.name} <span>{t("Chave")}</span>
+        </h3>
+        <Button fullWidth variant="outlined" onClick={onToggle} aria-pressed={component.closed}>
+          {t(component.closed ? "openSwitch" : "closeSwitch")}
+        </Button>
+        <p className="subtle">{t(component.closed ? "closed" : "open")}</p>
+      </>
+    );
+  const labels = {
+    resistor: "Resistência (Ω)",
+    voltage: "Tensão (V)",
+    capacitor: "capacitanceLabel",
+    inductor: "inductanceLabel",
+  };
+  const names = {
+    resistor: "Resistor",
+    voltage: "Fonte de tensão",
+    capacitor: "Capacitor",
+    inductor: "Indutor",
+  };
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        if (valid) onValue(numeric);
+        if (valid) {
+          if (numeric !== component.value) onValue(numeric);
+          if (reactive && initial !== component.initialValue) onInitialValue(initial);
+        }
       }}
     >
       <h3>
-        {component.name}{" "}
-        <span>{component.kind === "resistor" ? t("Resistor") : t("Fonte de tensão")}</span>
+        {component.name} <span>{t(names[component.kind])}</span>
       </h3>
       <TextField
         fullWidth
         size="small"
-        label={component.kind === "resistor" ? t("Resistência (Ω)") : t("Tensão (V)")}
+        label={t(labels[component.kind])}
         value={input}
         onChange={(event) => setInput(event.target.value)}
         error={!valid}
@@ -86,10 +130,26 @@ function Properties({
         }
         slotProps={{ htmlInput: { inputMode: "decimal" } }}
       />
+      {reactive && (
+        <TextField
+          fullWidth
+          size="small"
+          sx={{ mt: 2 }}
+          label={t(component.kind === "capacitor" ? "initialVoltageLabel" : "initialCurrentLabel")}
+          value={initialInput}
+          onChange={(event) => setInitialInput(event.target.value)}
+          error={initialInput.trim() === "" || !Number.isFinite(initial)}
+          helperText={t("initialValueHelp")}
+          slotProps={{ htmlInput: { inputMode: "decimal" } }}
+        />
+      )}
       <Button
         type="submit"
         variant="outlined"
-        disabled={!valid || numeric === component.value}
+        disabled={
+          !valid ||
+          (numeric === component.value && (!reactive || initial === (component.initialValue ?? 0)))
+        }
         fullWidth
       >
         {t("Aplicar valor")}
@@ -113,7 +173,7 @@ function Results({ result }: { result: SimulationOutcome | null }) {
     return (
       <div className="results-placeholder">
         <strong>{t("Pronto para analisar")}</strong>
-        <p>{t("Defina o terra e clique em Simular. Resultados são invalidados ao editar.")}</p>
+        <p>{t("readyAnalysisHelp")}</p>
       </div>
     );
   if (!result.ok)
@@ -129,27 +189,12 @@ function Results({ result }: { result: SimulationOutcome | null }) {
     );
   return (
     <>
-      <Alert severity="success">{t("Solução DC encontrada")}</Alert>
-      <h3>{t("Tensões dos nós")}</h3>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>{t("Nó")}</TableCell>
-            <TableCell>{t("Tensão")}</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {result.voltages.map((v, i) => (
-            <TableRow key={i}>
-              <TableCell>
-                N{i}
-                {i === 0 ? t("groundSuffix") : ""}
-              </TableCell>
-              <TableCell>{format(v)} V</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      {result.time === undefined && <Alert severity="success">{t("Solução DC encontrada")}</Alert>}
+      {result.time !== undefined && (
+        <p className="subtle" data-testid="simulation-time">
+          {t("simulatedTime")}: {formatPhysical(result.time, "s", i18n.resolvedLanguage)}
+        </p>
+      )}
       <h3>
         {t("Componentes")}
         <span>a → b</span>
@@ -166,12 +211,34 @@ function Results({ result }: { result: SimulationOutcome | null }) {
           {result.components.map((c) => (
             <TableRow key={c.id}>
               <TableCell>{c.name}</TableCell>
-              <TableCell>{format(c.voltage)} V</TableCell>
-              <TableCell>{format(c.current)} A</TableCell>
+              <TableCell>{formatPhysical(c.voltage, "V", i18n.resolvedLanguage)}</TableCell>
+              <TableCell>{formatPhysical(c.current, "A", i18n.resolvedLanguage)}</TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+      <details>
+        <summary>{t("Tensões dos nós")}</summary>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>{t("Nó")}</TableCell>
+              <TableCell>{t("Tensão")}</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {result.voltages.map((v, i) => (
+              <TableRow key={i}>
+                <TableCell>
+                  N{i}
+                  {i === 0 ? t("groundSuffix") : ""}
+                </TableCell>
+                <TableCell>{formatPhysical(v, "V", i18n.resolvedLanguage)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </details>
       <details>
         <summary>{t("Sistema MNA · A x = b")}</summary>
         <div className="matrix-scroll">
@@ -213,10 +280,9 @@ function App() {
   const { mode, toggleTheme } = useThemePreference();
   const { t, i18n } = useTranslation();
   const [state, dispatch] = useReducer(editorReducer, undefined, initialState);
-  const [analysis, setAnalysis] = useState<{ revision: number; result: SimulationOutcome } | null>(
-    null,
-  );
-  const result = analysis?.revision === state.revision ? analysis.result : null;
+  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("transient");
+  const simulation = useSimulation(state.document, state.simulationEpoch, analysisMode);
+  const result = simulation.result;
   const component =
     state.selection?.kind === "component"
       ? state.document.components.find((c) => c.id === state.selection?.id)
@@ -247,7 +313,7 @@ function App() {
             <span className="brand-mark">⌁</span>
             <div>
               <h1>Reactive Circuit</h1>
-              <p>{t("Laboratório de circuitos · análise DC")}</p>
+              <p>{t("laboratorySubtitle")}</p>
             </div>
           </div>
           <div className="header-actions">
@@ -279,13 +345,16 @@ function App() {
                 {mode === "dark" ? <LightModeIcon /> : <DarkModeIcon />}
               </IconButton>
             </Tooltip>
-            <Button
-              variant="contained"
-              onClick={() =>
-                setAnalysis({ revision: state.revision, result: simulateDc(state.document) })
-              }
-            >
-              {t("▶ Simular")}
+            <Button variant="contained" onClick={simulation.toggle}>
+              {t(
+                analysisMode === "dc"
+                  ? "▶ Simular"
+                  : simulation.running
+                    ? "pauseSimulation"
+                    : result?.ok
+                      ? "continueSimulation"
+                      : "startSimulation",
+              )}
             </Button>
           </div>
         </header>
@@ -322,6 +391,71 @@ function App() {
             </footer>
           </Paper>
           <Paper component="aside" className="sidebar">
+            <section className="side-section">
+              <h2>{t("simulationHeading")}</h2>
+              <TextField
+                select
+                fullWidth
+                size="small"
+                label={t("analysisMode")}
+                value={analysisMode}
+                onChange={(event) => setAnalysisMode(event.target.value as AnalysisMode)}
+                slotProps={{ select: { native: true } }}
+              >
+                <option value="transient">{t("transientAnalysis")}</option>
+                <option value="dc">{t("dcAnalysis")}</option>
+              </TextField>
+              {analysisMode === "transient" && (
+                <>
+                  <TextField
+                    select
+                    fullWidth
+                    size="small"
+                    sx={{ mt: 2 }}
+                    label={t("simulationSpeed")}
+                    value={simulation.speed}
+                    onChange={(event) => simulation.setSpeed(Number(event.target.value))}
+                    slotProps={{ select: { native: true } }}
+                  >
+                    {[0.001, 0.01, 0.1].map((speed) => (
+                      <option key={speed} value={speed}>
+                        {new Intl.NumberFormat(i18n.resolvedLanguage).format(speed)}×
+                      </option>
+                    ))}
+                  </TextField>
+                  <p className="subtle" role="status">
+                    {t(simulation.running ? "simulationRunning" : "simulationPaused")}
+                  </p>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    onClick={simulation.restart}
+                    disabled={!state.document.components.length}
+                  >
+                    {t("restartSimulation")}
+                  </Button>
+                  {state.document.components
+                    .filter((c) => c.kind === "switch")
+                    .map((c) => (
+                      <Button
+                        key={c.id}
+                        fullWidth
+                        onClick={() => dispatch({ type: "toggle-switch", id: c.id })}
+                        aria-pressed={c.closed}
+                      >
+                        {c.name}: {t(c.closed ? "openSwitch" : "closeSwitch")}
+                      </Button>
+                    ))}
+                </>
+              )}
+            </section>
+            <section className="side-section results-section">
+              <h2>
+                {t("Resultados")}
+                <span>{analysisMode === "dc" ? "DC / MNA" : t("transientAnalysis")}</span>
+              </h2>
+              <Results result={result} />
+            </section>
             <section className="side-section">
               <FormControl className="move-options">
                 <FormLabel id="move-connections-label">{t("Ao mover o componente")}</FormLabel>
@@ -361,9 +495,13 @@ function App() {
               <h2>{t("Propriedades")}</h2>
               {component ? (
                 <Properties
-                  key={`${component.id}:${component.value}`}
+                  key={`${component.id}:${component.value}:${"initialValue" in component ? component.initialValue : ""}`}
                   component={component}
                   onValue={(value) => dispatch({ type: "value", id: component.id, value })}
+                  onInitialValue={(value) =>
+                    dispatch({ type: "initial-value", id: component.id, value })
+                  }
+                  onToggle={() => dispatch({ type: "toggle-switch", id: component.id })}
                 />
               ) : (
                 <p className="subtle">
@@ -391,28 +529,33 @@ function App() {
                 </Button>
               </div>
             </section>
-            <section className="side-section results-section" aria-live="polite">
-              <h2>
-                {t("Resultados")}
-                <span>DC / MNA</span>
-              </h2>
-              <Results result={result} />
-            </section>
             <section className="side-section">
               <h2>{t("Circuito")}</h2>
               <div className="selection-actions">
                 <Button size="small" onClick={() => dispatch({ type: "reset", example: false })}>
                   {t("Novo circuito")}
                 </Button>
-                <Button size="small" onClick={() => dispatch({ type: "reset", example: true })}>
-                  {t("Carregar exemplo")}
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setAnalysisMode("transient");
+                    dispatch({ type: "reset", example: true });
+                  }}
+                >
+                  {t("loadRlcExample")}
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setAnalysisMode("dc");
+                    dispatch({ type: "reset", example: "dc" });
+                  }}
+                >
+                  {t("loadDcExample")}
                 </Button>
               </div>
-              <p className="subtle">
-                {t(
-                  "Modelo ideal, linear e em regime permanente. Dados apenas em memória: recarregar a página reinicia o circuito.",
-                )}
-              </p>
+              <p className="subtle">{t("simulationLimits")}</p>
+              <p className="subtle">{t("timeStepHelp")}</p>
               <details>
                 <summary>{t("Ajuda de conexão")}</summary>
                 <p className="subtle">

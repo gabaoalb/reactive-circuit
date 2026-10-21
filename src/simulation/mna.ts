@@ -8,6 +8,15 @@ export interface MnaSystem {
   unknowns: string[];
 }
 export function assembleMna(graph: ElectricalGraph): MnaSystem {
+  const unsupported = graph.branches.filter(
+    ({ component: c }) => c.kind !== "resistor" && c.kind !== "voltage",
+  );
+  if (unsupported.length)
+    throw new CircuitError(
+      "dcUnsupported",
+      "A análise DC suporta apenas resistores e fontes de tensão.",
+      unsupported.map(({ component: c }) => c.id),
+    );
   const count = graph.nodes.length - 1;
   const sources = graph.branches.filter((b) => b.component.kind === "voltage");
   const size = count + sources.length;
@@ -25,7 +34,7 @@ export function assembleMna(graph: ElectricalGraph): MnaSystem {
       add(end, end, g);
       add(a, end, -g);
       add(end, a, -g);
-    } else {
+    } else if (branch.component.kind === "voltage") {
       const index = count + sources.indexOf(branch);
       add(a, index, 1);
       add(end, index, -1);
@@ -56,6 +65,7 @@ export type SimulationOutcome =
       system: MnaSystem;
       x: number[];
       residual: number;
+      time?: number;
       voltages: number[];
       components: ComponentResult[];
     }

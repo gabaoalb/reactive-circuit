@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { exampleCircuit, pointKey, terminal } from "../domain/circuit";
-import type { CircuitDocument, Component } from "../domain/circuit";
+import type { CircuitDocument } from "../domain/circuit";
 import { buildElectricalGraph } from "./graph";
 import { simulateDc } from "./mna";
 import { solveLinearSystem } from "./solver";
 
-function circuit(elements: [string, Component["kind"], number, string, string][]): CircuitDocument {
+function circuit(
+  elements: [string, "resistor" | "voltage", number, string, string][],
+): CircuitDocument {
   const names = [...new Set(elements.flatMap((e) => [e[3], e[4]]))];
   const doc: CircuitDocument = {
     components: [],

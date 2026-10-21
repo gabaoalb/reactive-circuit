@@ -4,6 +4,7 @@ import { circuitColors } from "../theme";
 import { Circle, Group, Line, Rect, Text } from "react-konva";
 import type { KonvaEventObject } from "konva/lib/Node";
 import type { Component, Point } from "../domain/circuit";
+import { componentUnit, formatPhysical } from "../domain/circuit";
 import { componentDragPosition, componentLength } from "./geometry";
 
 interface Props {
@@ -12,15 +13,24 @@ interface Props {
   draggable: boolean;
   onSelect: () => void;
   onMove: (position: Point) => void;
+  onToggle: () => void;
 }
 
 /** Fixed-size symbol centered between two terminals, with variable-length leads. */
-export function ComponentShape({ component, selected, draggable, onSelect, onMove }: Props) {
+export function ComponentShape({
+  component,
+  selected,
+  draggable,
+  onSelect,
+  onMove,
+  onToggle,
+}: Props) {
   const colors = circuitColors(useTheme().palette);
-  const { i18n } = useTranslation();
-  const value = new Intl.NumberFormat(i18n.resolvedLanguage, {
-    maximumSignificantDigits: 6,
-  }).format(component.value);
+  const { t, i18n } = useTranslation();
+  const value =
+    component.kind === "switch"
+      ? t(component.closed ? "closed" : "open")
+      : formatPhysical(component.value, componentUnit(component), i18n.resolvedLanguage);
   const halfLength = componentLength(component) / 2;
   const move = (event: KonvaEventObject<DragEvent>) => {
     event.cancelBubble = true;
@@ -35,7 +45,10 @@ export function ComponentShape({ component, selected, draggable, onSelect, onMov
       draggable={draggable}
       onPointerClick={(event) => {
         event.cancelBubble = true;
-        if (draggable) onSelect();
+        if (draggable) {
+          onSelect();
+          if (component.kind === "switch") onToggle();
+        }
       }}
       onDragStart={onSelect}
       onDragMove={move}
@@ -74,6 +87,33 @@ export function ComponentShape({ component, selected, draggable, onSelect, onMov
             strokeWidth={2}
             fill={colors.background}
           />
+        ) : component.kind === "capacitor" ? (
+          <>
+            <Line points={[-24, 0, -6, 0]} stroke={colors.symbol} strokeWidth={2} />
+            <Line points={[6, 0, 24, 0]} stroke={colors.symbol} strokeWidth={2} />
+            <Line points={[-6, -20, -6, 20]} stroke={colors.symbol} strokeWidth={3} />
+            <Line points={[6, -20, 6, 20]} stroke={colors.symbol} strokeWidth={3} />
+          </>
+        ) : component.kind === "inductor" ? (
+          <Line
+            points={Array.from({ length: 97 }, (_, i) => {
+              const x = -24 + i / 2;
+              const local = ((i % 24) / 24) * 2 - 1;
+              return [x, -12 * Math.sqrt(Math.max(0, 1 - local * local))];
+            }).flat()}
+            stroke={colors.symbol}
+            strokeWidth={2}
+          />
+        ) : component.kind === "switch" ? (
+          <>
+            <Circle x={-22} radius={3} stroke={colors.symbol} strokeWidth={2} />
+            <Circle x={22} radius={3} stroke={colors.symbol} strokeWidth={2} />
+            <Line
+              points={[-22, 0, 22, component.closed ? 0 : -20]}
+              stroke={colors.symbol}
+              strokeWidth={3}
+            />
+          </>
         ) : (
           <>
             <Circle radius={23} stroke={colors.symbol} strokeWidth={2} fill={colors.background} />
@@ -85,7 +125,7 @@ export function ComponentShape({ component, selected, draggable, onSelect, onMov
       <Text
         x={Math.abs(Math.sin((component.rotation * Math.PI) / 180)) > 0.5 ? 32 : -35}
         y={Math.abs(Math.sin((component.rotation * Math.PI) / 180)) > 0.5 ? -16 : -45}
-        text={`${component.name}\n${value} ${component.kind === "resistor" ? "Ω" : "V"}`}
+        text={`${component.name}\n${value}`}
         fontSize={12}
         lineHeight={1.4}
         fill={colors.symbol}

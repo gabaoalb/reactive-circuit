@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pointKey, terminal } from "../domain/circuit";
+import { exampleCircuit, pointKey, terminal } from "../domain/circuit";
 import { buildElectricalGraph } from "../simulation/graph";
 import {
   componentDragPosition,
@@ -12,7 +12,35 @@ import {
   wirePath,
 } from "./geometry";
 import { simulateDc } from "../simulation/mna";
-import { editorReducer, initialState } from "./state";
+import { electricalKey, initializeTransient } from "../simulation/transient";
+import { editorReducer, initialState as defaultInitialState } from "./state";
+const initialState = () => ({ ...defaultInitialState(), document: exampleCircuit() });
+describe("RLC editor integration", () => {
+  it("loads a runnable RLC by default and retains the DC example", () => {
+    const initial = defaultInitialState();
+    expect(
+      initializeTransient(initial.document).snapshot.components.find((c) => c.id === "c1")?.voltage,
+    ).toBeCloseTo(-9.86, 12);
+    const dc = editorReducer(initial, { type: "reset", example: "dc" });
+    expect(simulateDc(dc.document)).toMatchObject({ ok: true, voltages: [0, 10, 5] });
+    const rlc = editorReducer(dc, { type: "reset", example: true });
+    expect(rlc.simulationEpoch).toBe(initial.simulationEpoch + 2);
+    expect(rlc.document.components.find((c) => c.kind === "switch")).toMatchObject({
+      closed: false,
+    });
+  });
+  it("distinguishes switch operation from editable electrical parameters", () => {
+    const initial = defaultInitialState();
+    const switched = editorReducer(initial, { type: "toggle-switch", id: "s1" });
+    expect(electricalKey(switched.document)).toBe(electricalKey(initial.document));
+    expect(switched.document.components.find((c) => c.id === "s1")).toMatchObject({ closed: true });
+    const edited = editorReducer(switched, { type: "initial-value", id: "c1", value: 0 });
+    expect(electricalKey(edited.document)).not.toBe(electricalKey(switched.document));
+    expect(
+      initializeTransient(edited.document).snapshot.components.find((c) => c.id === "c1")?.voltage,
+    ).toBeCloseTo(0, 12);
+  });
+});
 describe("editor commands", () => {
   it.each(["r1", "v1"])(
     "stretches %s about its fixed terminal without changing connectivity or simulation",

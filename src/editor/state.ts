@@ -1,9 +1,9 @@
-import { emptyCircuit, exampleCircuit, pointKey } from "../domain/circuit";
+import { emptyCircuit, exampleCircuit, rlcCircuit, pointKey } from "../domain/circuit";
 import type { CircuitDocument, Component, ConnectionPointRef, Point } from "../domain/circuit";
 import { detachComponent } from "./connections";
 import { resizeComponent } from "./geometry";
 export type MoveConnections = "keep" | "detach";
-export type Tool = "select" | "resistor" | "voltage" | "wire" | "junction" | "ground";
+export type Tool = "select" | Component["kind"] | "wire" | "junction" | "ground";
 export type Selection = { kind: "component" | "wire" | "junction"; id: string };
 export interface EditorState {
   document: CircuitDocument;
@@ -11,14 +11,16 @@ export interface EditorState {
   selection: Selection | null;
   draft: { from: ConnectionPointRef; bends: Point[] } | null;
   revision: number;
+  simulationEpoch: number;
   moveConnections: MoveConnections;
 }
 export const initialState = (): EditorState => ({
-  document: exampleCircuit(),
+  document: rlcCircuit(),
   tool: "select",
   selection: null,
   draft: null,
   revision: 0,
+  simulationEpoch: 0,
   moveConnections: "keep",
 });
 export type EditorAction =
@@ -32,10 +34,12 @@ export type EditorAction =
   | { type: "move-connections"; value: MoveConnections }
   | { type: "rotate" }
   | { type: "value"; id: string; value: number }
+  | { type: "initial-value"; id: string; value: number }
+  | { type: "toggle-switch"; id: string }
   | { type: "point"; ref: ConnectionPointRef; wireId: string }
   | { type: "bend"; position: Point }
   | { type: "delete" }
-  | { type: "reset"; example: boolean };
+  | { type: "reset"; example: boolean | "dc" };
 export function editorReducer(state: EditorState, action: EditorAction): EditorState {
   const doc = state.document;
   const update = (document: CircuitDocument): EditorState => ({
@@ -55,8 +59,14 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
     case "reset":
       return {
         ...initialState(),
-        document: action.example ? exampleCircuit() : emptyCircuit(),
+        document:
+          action.example === "dc"
+            ? exampleCircuit()
+            : action.example
+              ? rlcCircuit()
+              : emptyCircuit(),
         revision: state.revision + 1,
+        simulationEpoch: state.simulationEpoch + 1,
         moveConnections: state.moveConnections,
       };
     case "add-component":
@@ -126,7 +136,23 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       return update({
         ...doc,
         components: doc.components.map((c) =>
-          c.id === action.id ? { ...c, value: action.value } : c,
+          c.id === action.id && c.kind !== "switch" ? { ...c, value: action.value } : c,
+        ),
+      });
+    case "initial-value":
+      return update({
+        ...doc,
+        components: doc.components.map((c) =>
+          c.id === action.id && (c.kind === "capacitor" || c.kind === "inductor")
+            ? { ...c, initialValue: action.value }
+            : c,
+        ),
+      });
+    case "toggle-switch":
+      return update({
+        ...doc,
+        components: doc.components.map((c) =>
+          c.id === action.id && c.kind === "switch" ? { ...c, closed: !c.closed } : c,
         ),
       });
     case "bend":

@@ -10,7 +10,8 @@ Construir um simulador de circuitos elétricos 100% web com React e TypeScript. 
 - `src/main.tsx` inicializa a aplicação; `src/app/App.tsx` compõe editor, propriedades e resultados.
 - MUI e Emotion estão disponíveis para a interface; Konva e React Konva, para o editor gráfico.
 - React Compiler está configurado no Vite.
-- `src/domain` define o documento; `src/editor` mantém comandos e geometria; `src/simulation` implementa grafo, MNA e solver DC puros.
+- `src/domain` define o documento; `src/editor` mantém comandos e geometria; `src/simulation` implementa grafo, MNA e motores DC e transiente puros.
+- A página inicia com o exemplo RLC do Falstad em execução; `src/app/useSimulation.ts` coordena pausa, reinício, velocidade e atualização dos resultados. Capacitor, indutor e chave são componentes editáveis; o divisor anterior permanece como exemplo DC.
 - Vitest cobre o núcleo elétrico e os comandos de edição. Oxfmt tem configuração explícita.
 - Temas claro e escuro são definidos em `src/theme.ts`; `src/app/AppShell.tsx` mantém os estilos do layout.
 - `src/i18n` contém as traduções em português brasileiro, inglês e espanhol.

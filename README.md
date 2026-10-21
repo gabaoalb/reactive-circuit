@@ -1,6 +1,6 @@
 # Reactive Circuit
 
-Simulador de circuitos elétricos DC inteiramente no navegador, feito com React, TypeScript e React Konva. Inclui resistores, fontes ideais de tensão, fios e junções explícitas.
+Simulador de circuitos elétricos DC e transientes inteiramente no navegador, feito com React, TypeScript e React Konva. Inclui resistores, fontes ideais de tensão, capacitores, indutores, chaves, fios e junções explícitas.
 
 ## Executar
 
@@ -19,18 +19,34 @@ Os catálogos estão em `src/i18n/pt-BR.json`, `en.json` e `es.json`. A configur
 
 ## Usar o editor
 
-1. O exemplo inicial é um divisor: fonte de 10 V e dois resistores de 1 kΩ. Clique em **Simular** para obter 5 V no nó intermediário e 5 mA nos resistores.
-2. **Novo circuito** limpa o documento. Escolha **Resistor**, **Fonte DC** ou **Junção**, depois clique na grade. A ferramenta volta para seleção após inserir.
-3. Em **Selecionar**, clique no componente para editar seu valor em Ω ou V, aplique a alteração e use **Girar 90°**. Arraste o corpo para mover o componente inteiro ou uma das pontas para reposicionar apenas aquele terminal. A outra ponta fica fixa; o símbolo mantém seu tamanho, fica no ponto médio e acompanha a direção entre as pontas. Apenas as pernas mudam de comprimento. A distância mínima entre terminais é 80 px, para evitar sobreposição do símbolo. Terminais e junções usam a grade de 20 px.
+1. O exemplo inicial é um circuito RLC em execução automática, descrito abaixo. **Exemplo DC** carrega o divisor anterior: fonte de 10 V e dois resistores de 1 kΩ. Clique em **Simular** no modo DC para obter 5 V no nó intermediário e 5 mA nos resistores.
+2. **Novo circuito** limpa o documento. Escolha **Resistor**, **Fonte DC**, **Capacitor**, **Indutor**, **Chave** ou **Junção**, depois clique na grade. A ferramenta volta para seleção após inserir.
+3. Em **Selecionar**, clique no componente para editar seu valor em unidades SI, aplique a alteração e use **Girar 90°**. Arraste o corpo para mover o componente inteiro ou uma das pontas para reposicionar apenas aquele terminal. A outra ponta fica fixa; o símbolo mantém seu tamanho, fica no ponto médio e acompanha a direção entre as pontas. Apenas as pernas mudam de comprimento. A distância mínima entre terminais é 80 px, para evitar sobreposição do símbolo. Terminais e junções usam a grade de 20 px.
 4. Escolha **Fio**, clique no terminal inicial, clique na grade para adicionar cotovelos e termine em outro terminal ou junção. Cada trecho é roteado horizontalmente e depois verticalmente. Para ramificar, crie uma junção e termine os fios nela. Cruzamentos, sobreposições e cotovelos não criam conexões automáticas.
 5. Escolha **Terra** e clique em um terminal ou junção. Uma nova marca substitui a anterior; não une pontos eletricamente.
-6. Clique em **Simular**. A interface mostra tensões, correntes, identificadores dos nós e uma seção expansível com a matriz MNA, as incógnitas, o vetor independente, a solução e o resíduo.
+6. Escolha a análise e clique em **Simular** (DC) ou **Iniciar simulação** (transiente). A interface mostra tensões, correntes, identificadores dos nós e seções expansíveis com tensões dos nós e matriz MNA, incógnitas, vetor independente, solução e resíduo.
 
 As portas são **a** e **b**, respectivamente à esquerda e à direita antes da rotação. Fontes impõem `Va − Vb = E`. Todas as correntes são positivas de a para b: uma fonte alimentando uma carga normalmente apresenta corrente negativa. Os valores são armazenados em unidades SI; os campos aceitam notação científica como `1e3`, sem sufixos de unidade.
 
 Em **Ao mover o componente**, escolha **Manter conexões** (padrão) para que os fios acompanhem o corpo, ou **Desconectar ao mover** para levantar o componente do circuito. No segundo modo, os fios e o terra ficam nas posições antigas, ligados a junções criadas nas pontas; vários fios na mesma porta continuam ligados entre si. Ao arrastar um terminal, apenas a ponta movida é desconectada; a outra permanece fixa e conectada. A desconexão acontece somente quando há deslocamento efetivo, não ao clicar, girar ou tentar aproximar demais os terminais. A opção é preservada ao criar outro circuito ou carregar o exemplo, mas não após recarregar a página. Reconexões continuam explícitas pela ferramenta Fio.
 
 **Escape** cancela a ferramenta e o fio em andamento. **Delete** ou **Excluir** remove a seleção. Excluir um componente ou junção remove os fios incidentes e a referência de terra, se marcada nele. Atalhos não interferem nos campos de texto. Edições invalidam resultados anteriores.
+
+## Simulação transiente e exemplo RLC
+
+A página abre com o exemplo RLC em execução automática, usando a topologia e o estado salvo de `lrc.txt` do [CircuitJS/Falstad](https://www.falstad.com/circuit/). O capacitor é de **15 µF**, não 15 pF. Há um resistor de 10 Ω, um indutor de 1 H, uma chave inicialmente aberta, uma fonte DC de 5 V e um resistor de 100 Ω. O nó esquerdo é a referência de terra explícita; diferenças de tensão e correntes reproduzem a mesma física independentemente da referência adotada no Falstad.
+
+A tensão inicial do capacitor, da junção inferior central para o nó esquerdo, é −9,86 V; a corrente inicial do indutor, de cima para baixo, é 30 mA. Esses valores reproduzem o estado salvo ao carregar o exemplo; não representam um circuito inicialmente sem energia. Reiniciar restaura essas condições iniciais e mantém a configuração atual da chave. Recarregar **Exemplo RLC** restaura também a chave aberta e inicia a execução. **Exemplo DC** carrega o divisor resistivo anterior, para análise pelo botão Simular.
+
+Use **Pausar/Continuar**, **Reiniciar simulação** e o seletor de velocidade. A velocidade padrão é 0,01 segundo simulado por segundo real; também há 0,001× e 0,1×. Os resultados exibem tempo, tensões e correntes com prefixos de engenharia. Não há gráficos nesta etapa.
+
+Na ferramenta Selecionar, clicar no símbolo da chave comuta seu estado; arrastar move o componente. Também há botões de comutação acessíveis por teclado no painel de simulação e nas propriedades. Comutar preserva o tempo, a tensão do capacitor e a corrente do indutor, inclusive enquanto a execução está pausada. Capacitores e indutores novos começam sem energia e suas condições iniciais podem ser editadas nas propriedades.
+
+Editar valores, condições iniciais ou conexões pausa e invalida a sessão; iniciar novamente aplica as condições iniciais. Movimentos, rotação e ajustes de cotovelos que preservem conexões mantêm a sessão. A preferência de desconexão ao mover continua sendo respeitada. Tema e idioma não reiniciam a simulação. As atualizações numéricas não são anunciadas continuamente por leitor de tela.
+
+O motor usa modelos companheiros Norton e integração trapezoidal com passo fixo de **5 µs**. Na inicialização, uma MNA impõe as tensões iniciais dos capacitores e as correntes iniciais dos indutores e determina as demais grandezas. Chaves abertas não conduzem; fechadas impõem tensão zero, com corrente explícita na MNA. Uma comutação recalcula as grandezas algébricas com as variáveis de energia preservadas e usa Euler implícito no primeiro passo seguinte, antes de retomar a integração trapezoidal. Condições iniciais incompatíveis com fontes ou restrições ideais geram diagnóstico.
+
+`initializeTransient`, `stepTransient` e `setTransientSwitch` são operações puras: devolvem novas sessões e não alteram o documento nem o histórico anterior. `useSimulation` coordena o ciclo no navegador: lotes com orçamento de 8 ms por frame e publicação de resultados a 20 Hz. Pausar ou desmontar cancela o loop; uma aba oculta suspende o avanço e o tempo perdido não é recuperado. Quando o orçamento de processamento não é suficiente, a simulação fica mais lenta em vez de acumular trabalho. O tempo simulado exibido é a referência para os resultados.
 
 ## Separação de responsabilidades
 
@@ -66,8 +82,9 @@ Os testes cobrem cargas conhecidas, divisor, paralelos, fontes entre nós não a
 
 ## Limites desta versão
 
-- Apenas análise DC linear, em regime permanente, com componentes ideais e resistências positivas finitas.
-- Sem fontes de corrente, elementos reativos, semicondutores ou análise AC/transiente.
+- Análise DC linear em regime permanente para resistores e fontes de tensão. Componentes reativos e chaves exigem o modo transiente nesta etapa.
+- Análise transiente linear ideal com R, L, C e chaves. R, L e C devem ser positivos e finitos. O passo é fixo; circuitos com escalas de tempo menores podem exigir um passo menor pela API do motor. Não há controle adaptativo de erro.
+- Sem fontes de corrente editáveis, semicondutores, saturação, parasitas, análise AC, gráficos ou importação de arquivos Falstad.
 - Não calcula correntes individuais dos fios ideais: em redes com caminhos redundantes elas podem ser indeterminadas.
 - Subcircuitos flutuantes e fontes redundantes ou contraditórias impedem a análise; circuitos abertos que tenham solução única são aceitos.
 - Solver denso síncrono voltado a circuitos pequenos; valores extremos ou sistemas próximos da singularidade podem ser rejeitados pela tolerância numérica.
