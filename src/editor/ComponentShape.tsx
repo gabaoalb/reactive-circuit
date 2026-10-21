@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Circle, Group, Line, Rect, Text } from "react-konva";
 import type { KonvaEventObject } from "konva/lib/Node";
 import type { Component, Point } from "../domain/circuit";
@@ -13,6 +14,10 @@ interface Props {
 
 /** Fixed-size symbol centered between two terminals, with variable-length leads. */
 export function ComponentShape({ component, selected, draggable, onSelect, onMove }: Props) {
+  const { i18n } = useTranslation();
+  const value = new Intl.NumberFormat(i18n.resolvedLanguage, {
+    maximumSignificantDigits: 6,
+  }).format(component.value);
   const halfLength = componentLength(component) / 2;
   const move = (event: KonvaEventObject<DragEvent>) => {
     event.cancelBubble = true;
@@ -77,7 +82,7 @@ export function ComponentShape({ component, selected, draggable, onSelect, onMov
       <Text
         x={Math.abs(Math.sin((component.rotation * Math.PI) / 180)) > 0.5 ? 32 : -35}
         y={Math.abs(Math.sin((component.rotation * Math.PI) / 180)) > 0.5 ? -16 : -45}
-        text={`${component.name}\n${component.value} ${component.kind === "resistor" ? "Ω" : "V"}`}
+        text={`${component.name}\n${value} ${component.kind === "resistor" ? "Ω" : "V"}`}
         fontSize={12}
         lineHeight={1.4}
         fill="#173f48"

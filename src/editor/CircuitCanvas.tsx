@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
 import type { Dispatch } from "react";
 import { Circle, Group, Layer, Line, Stage, Text } from "react-konva";
@@ -28,6 +29,7 @@ const placement = (point: Point): Point => {
   return { x: Math.max(60, position.x), y: Math.max(60, position.y) };
 };
 export function CircuitCanvas({ state, dispatch, result }: Props) {
+  const { t } = useTranslation();
   const container = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 800, height: 560 });
   const [pointer, setPointer] = useState<Point | null>(null);
@@ -156,7 +158,9 @@ export function CircuitCanvas({ state, dispatch, result }: Props) {
       className={`canvas-container tool-${state.tool}`}
       ref={container}
       role="region"
-      aria-label="Editor de circuito. Use as ferramentas e clique na grade; fios conectam terminais ou junções explícitas."
+      aria-label={t(
+        "Editor de circuito. Use as ferramentas e clique na grade; fios conectam terminais ou junções explícitas.",
+      )}
     >
       <Stage
         width={width}
@@ -236,7 +240,8 @@ export function CircuitCanvas({ state, dispatch, result }: Props) {
       </Stage>
       {!doc.components.length && (
         <div className="canvas-empty">
-          Seu circuito começa aqui<span>Escolha um componente e clique na grade.</span>
+          {t("Seu circuito começa aqui")}
+          <span>{t("Escolha um componente e clique na grade.")}</span>
         </div>
       )}
     </div>

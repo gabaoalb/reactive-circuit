@@ -11,6 +11,12 @@ npm install
 npm run dev
 ```
 
+## Idiomas
+
+A interface oferece português brasileiro, inglês e espanhol pelo seletor no cabeçalho. A preferência fica salva no navegador; no primeiro acesso, usa o primeiro idioma compatível da lista do navegador, com português brasileiro como alternativa. Trocar o idioma preserva o circuito e os resultados. Os campos numéricos continuam aceitando ponto decimal e notação científica, como `1e3`.
+
+Os catálogos estão em `src/i18n/pt-BR.json`, `en.json` e `es.json`. A configuração em `src/i18n/index.ts` usa i18next e react-i18next. Mantenha as mesmas chaves e parâmetros de interpolação nos três arquivos. Diagnósticos são traduzidos na interface pelos códigos do motor, que permanece independente da internacionalização.
+
 ## Usar o editor
 
 1. O exemplo inicial é um divisor: fonte de 10 V e dois resistores de 1 kΩ. Clique em **Simular** para obter 5 V no nó intermediário e 5 mA nos resistores.

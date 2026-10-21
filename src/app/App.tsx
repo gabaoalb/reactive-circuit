@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useReducer, useState } from "react";
 import {
   Alert,
@@ -41,9 +42,6 @@ const instructions: Record<Tool, string> = {
   junction: "Clique na grade para criar uma junção. Conecte os fios explicitamente a ela.",
   ground: "Clique em um terminal ou junção para definir a referência de 0 V.",
 };
-const format = (value: number) =>
-  Math.abs(value) < 1e-15 ? "0" : Number(value.toPrecision(6)).toString();
-
 function Properties({
   component,
   onValue,
@@ -51,6 +49,7 @@ function Properties({
   component: Component;
   onValue: (value: number) => void;
 }) {
+  const { t } = useTranslation();
   const [input, setInput] = useState(String(component.value));
   const numeric = Number(input);
   const valid =
@@ -66,17 +65,17 @@ function Properties({
     >
       <h3>
         {component.name}{" "}
-        <span>{component.kind === "resistor" ? "Resistor" : "Fonte de tensão"}</span>
+        <span>{component.kind === "resistor" ? t("Resistor") : t("Fonte de tensão")}</span>
       </h3>
       <TextField
         fullWidth
         size="small"
-        label={component.kind === "resistor" ? "Resistência (Ω)" : "Tensão (V)"}
+        label={component.kind === "resistor" ? t("Resistência (Ω)") : t("Tensão (V)")}
         value={input}
         onChange={(event) => setInput(event.target.value)}
         error={!valid}
         helperText={
-          !valid ? "Informe um valor finito válido." : "Unidades SI; aceita notação como 1e3."
+          !valid ? t("Informe um valor finito válido.") : t("Unidades SI; aceita notação como 1e3.")
         }
         slotProps={{ htmlInput: { inputMode: "decimal" } }}
       />
@@ -86,43 +85,50 @@ function Properties({
         disabled={!valid || numeric === component.value}
         fullWidth
       >
-        Aplicar valor
+        {t("Aplicar valor")}
       </Button>
       <p className="subtle">
         {component.kind === "voltage"
-          ? "a (+) → b (−). Corrente positiva de a para b."
-          : "Tensão Va − Vb; corrente positiva de a para b."}
+          ? t("a (+) → b (−). Corrente positiva de a para b.")
+          : t("Tensão Va − Vb; corrente positiva de a para b.")}
       </p>
-      <p className="subtle">Rotação: {Number(component.rotation.toFixed(2))}°</p>
+      <p className="subtle">{t("rotation", { value: Number(component.rotation.toFixed(2)) })}</p>
     </form>
   );
 }
 function Results({ result }: { result: SimulationOutcome | null }) {
+  const { t, i18n } = useTranslation();
+  const format = (value: number) =>
+    new Intl.NumberFormat(i18n.resolvedLanguage, { maximumSignificantDigits: 6 }).format(
+      Math.abs(value) < 1e-15 ? 0 : value,
+    );
   if (!result)
     return (
       <div className="results-placeholder">
-        <strong>Pronto para analisar</strong>
-        <p>Defina o terra e clique em Simular. Resultados são invalidados ao editar.</p>
+        <strong>{t("Pronto para analisar")}</strong>
+        <p>{t("Defina o terra e clique em Simular. Resultados são invalidados ao editar.")}</p>
       </div>
     );
   if (!result.ok)
     return (
       <Alert severity="error">
-        {result.diagnostic.message}
+        {t(`diagnostic_${result.diagnostic.code}`, { defaultValue: result.diagnostic.message })}
         {result.diagnostic.elementIds.length > 0 && (
-          <div className="diagnostic-ids">Elementos: {result.diagnostic.elementIds.join(", ")}</div>
+          <div className="diagnostic-ids">
+            {t("elements", { ids: result.diagnostic.elementIds.join(", ") })}
+          </div>
         )}
       </Alert>
     );
   return (
     <>
-      <Alert severity="success">Solução DC encontrada</Alert>
-      <h3>Tensões dos nós</h3>
+      <Alert severity="success">{t("Solução DC encontrada")}</Alert>
+      <h3>{t("Tensões dos nós")}</h3>
       <table>
         <thead>
           <tr>
-            <th>Nó</th>
-            <th>Tensão</th>
+            <th>{t("Nó")}</th>
+            <th>{t("Tensão")}</th>
           </tr>
         </thead>
         <tbody>
@@ -130,7 +136,7 @@ function Results({ result }: { result: SimulationOutcome | null }) {
             <tr key={i}>
               <td>
                 N{i}
-                {i === 0 ? " · terra" : ""}
+                {i === 0 ? t("groundSuffix") : ""}
               </td>
               <td>{format(v)} V</td>
             </tr>
@@ -138,14 +144,15 @@ function Results({ result }: { result: SimulationOutcome | null }) {
         </tbody>
       </table>
       <h3>
-        Componentes <span>a → b</span>
+        {t("Componentes")}
+        <span>a → b</span>
       </h3>
       <table>
         <thead>
           <tr>
-            <th>Nome</th>
+            <th>{t("Nome")}</th>
             <th>Va − Vb</th>
-            <th>Corrente</th>
+            <th>{t("Corrente")}</th>
           </tr>
         </thead>
         <tbody>
@@ -159,12 +166,12 @@ function Results({ result }: { result: SimulationOutcome | null }) {
         </tbody>
       </table>
       <details>
-        <summary>Sistema MNA · A x = b</summary>
+        <summary>{t("Sistema MNA · A x = b")}</summary>
         <div className="matrix-scroll">
           <table>
             <thead>
               <tr>
-                <th>Equação</th>
+                <th>{t("Equação")}</th>
                 {result.system.unknowns.map((name, i) => (
                   <th key={i}>{name}</th>
                 ))}
@@ -185,16 +192,18 @@ function Results({ result }: { result: SimulationOutcome | null }) {
           </table>
         </div>
         <p className="subtle">x = [{result.x.map(format).join(", ")}]</p>
-        <p className="subtle">Resíduo normalizado: {format(result.residual)}</p>
+        <p className="subtle">{t("residual", { value: format(result.residual) })}</p>
       </details>
       <p className="subtle">
-        Correntes negativas indicam sentido oposto a a → b. Correntes individuais de fios ideais não
-        são calculadas.
+        {t(
+          "Correntes negativas indicam sentido oposto a a → b. Correntes individuais de fios ideais não são calculadas.",
+        )}
       </p>
     </>
   );
 }
 function App() {
+  const { t, i18n } = useTranslation();
   const [state, dispatch] = useReducer(editorReducer, undefined, initialState);
   const [analysis, setAnalysis] = useState<{ revision: number; result: SimulationOutcome } | null>(
     null,
@@ -230,24 +239,38 @@ function App() {
             <span className="brand-mark">⌁</span>
             <div>
               <h1>Reactive Circuit</h1>
-              <p>Laboratório de circuitos · análise DC</p>
+              <p>{t("Laboratório de circuitos · análise DC")}</p>
             </div>
           </div>
           <div className="header-actions">
-            <Chip label="100% no navegador" size="small" variant="outlined" />
+            <TextField
+              select
+              size="small"
+              label={t("language")}
+              value={i18n.resolvedLanguage}
+              onChange={(event) => {
+                void i18n.changeLanguage(event.target.value);
+              }}
+              slotProps={{ select: { native: true } }}
+            >
+              <option value="pt-BR">Português (Brasil)</option>
+              <option value="en">English</option>
+              <option value="es">Español</option>
+            </TextField>
+            <Chip label={t("100% no navegador")} size="small" variant="outlined" />
             <Button
               variant="contained"
               onClick={() =>
                 setAnalysis({ revision: state.revision, result: simulateDc(state.document) })
               }
             >
-              ▶ Simular
+              {t("▶ Simular")}
             </Button>
           </div>
         </header>
         <main className="workspace">
-          <section className="editor-panel" aria-label="Área de edição">
-            <div className="toolbar" role="toolbar" aria-label="Ferramentas do circuito">
+          <section className="editor-panel" aria-label={t("Área de edição")}>
+            <div className="toolbar" role="toolbar" aria-label={t("Ferramentas do circuito")}>
               {tools.map(({ tool, label, icon }) => (
                 <Button
                   key={tool}
@@ -258,27 +281,29 @@ function App() {
                   <span className="tool-icon" aria-hidden="true">
                     {icon}
                   </span>
-                  {label}
+                  {t(label)}
                 </Button>
               ))}
             </div>
             <div className="instruction" role="status">
-              {instructions[state.tool]}
-              {state.draft && <strong> · Fio em andamento</strong>}
+              {t(instructions[state.tool])}
+              {state.draft && <strong>{t(" · Fio em andamento")}</strong>}
             </div>
             <CircuitCanvas state={state} dispatch={dispatch} result={result} />
             <footer className="editor-footer">
               <span>
-                {state.document.components.length} componentes · {state.document.wires.length} fios
-                · grade 20 px
+                {t("counts", {
+                  components: state.document.components.length,
+                  wires: state.document.wires.length,
+                })}
               </span>
-              <span>Junções explícitas · cruzamentos não conectam</span>
+              <span>{t("Junções explícitas · cruzamentos não conectam")}</span>
             </footer>
           </section>
           <aside className="sidebar">
             <section className="side-section">
               <fieldset className="move-options">
-                <legend>Ao mover o componente</legend>
+                <legend>{t("Ao mover o componente")}</legend>
                 <label>
                   <input
                     type="radio"
@@ -286,7 +311,7 @@ function App() {
                     checked={state.moveConnections === "keep"}
                     onChange={() => dispatch({ type: "move-connections", value: "keep" })}
                   />{" "}
-                  Manter conexões
+                  {t("Manter conexões")}
                 </label>
                 <label>
                   <input
@@ -295,20 +320,20 @@ function App() {
                     checked={state.moveConnections === "detach"}
                     onChange={() => dispatch({ type: "move-connections", value: "detach" })}
                   />{" "}
-                  Desconectar ao mover
+                  {t("Desconectar ao mover")}
                 </label>
               </fieldset>
               <p className="subtle">
                 {state.moveConnections === "keep"
-                  ? "Os fios acompanham o movimento do corpo."
-                  : "Os fios ficam no lugar, com junções nas pontas antigas."}{" "}
+                  ? t("Os fios acompanham o movimento do corpo.")
+                  : t("Os fios ficam no lugar, com junções nas pontas antigas.")}{" "}
                 {state.moveConnections === "keep"
-                  ? "Arrastar um terminal também mantém suas conexões."
-                  : "Arrastar um terminal desconecta apenas a ponta movida."}
+                  ? t("Arrastar um terminal também mantém suas conexões.")
+                  : t("Arrastar um terminal desconecta apenas a ponta movida.")}
               </p>
             </section>
             <section className="side-section">
-              <h2>Propriedades</h2>
+              <h2>{t("Propriedades")}</h2>
               {component ? (
                 <Properties
                   key={`${component.id}:${component.value}`}
@@ -318,8 +343,8 @@ function App() {
               ) : (
                 <p className="subtle">
                   {state.selection
-                    ? `${state.selection.kind === "wire" ? "Fio" : "Junção"} selecionado. Use Excluir para removê-lo.`
-                    : "Selecione um componente para editar seu valor."}
+                    ? t(state.selection.kind === "wire" ? "selectedWire" : "selectedJunction")
+                    : t("Selecione um componente para editar seu valor.")}
                 </p>
               )}
               <div className="selection-actions">
@@ -329,7 +354,7 @@ function App() {
                   disabled={!component}
                   onClick={() => dispatch({ type: "rotate" })}
                 >
-                  Girar 90°
+                  {t("Girar 90°")}
                 </Button>
                 <Button
                   size="small"
@@ -337,47 +362,50 @@ function App() {
                   disabled={!state.selection}
                   onClick={() => dispatch({ type: "delete" })}
                 >
-                  Excluir
+                  {t("Excluir")}
                 </Button>
               </div>
             </section>
             <section className="side-section results-section" aria-live="polite">
               <h2>
-                Resultados <span>DC / MNA</span>
+                {t("Resultados")}
+                <span>DC / MNA</span>
               </h2>
               <Results result={result} />
             </section>
             <section className="side-section">
-              <h2>Circuito</h2>
+              <h2>{t("Circuito")}</h2>
               <div className="selection-actions">
                 <Button size="small" onClick={() => dispatch({ type: "reset", example: false })}>
-                  Novo circuito
+                  {t("Novo circuito")}
                 </Button>
                 <Button size="small" onClick={() => dispatch({ type: "reset", example: true })}>
-                  Carregar exemplo
+                  {t("Carregar exemplo")}
                 </Button>
               </div>
               <p className="subtle">
-                Modelo ideal, linear e em regime permanente. Dados apenas em memória: recarregar a
-                página reinicia o circuito.
+                {t(
+                  "Modelo ideal, linear e em regime permanente. Dados apenas em memória: recarregar a página reinicia o circuito.",
+                )}
               </p>
               <details>
-                <summary>Ajuda de conexão</summary>
+                <summary>{t("Ajuda de conexão")}</summary>
                 <p className="subtle">
-                  As duas portas de cada símbolo são a e b, respectivamente à esquerda e à direita
-                  antes da rotação. Para ramificar, coloque uma junção e termine cada fio nela.
-                  Pontas sobrepostas não conectam automaticamente.
+                  {t(
+                    "As duas portas de cada símbolo são a e b, respectivamente à esquerda e à direita antes da rotação. Para ramificar, coloque uma junção e termine cada fio nela. Pontas sobrepostas não conectam automaticamente.",
+                  )}
                 </p>
                 <p className="subtle">
-                  Escape cancela a ferramenta. Delete exclui a seleção. Escolha Terra e clique em um
-                  ponto para marcar 0 V.
+                  {t(
+                    "Escape cancela a ferramenta. Delete exclui a seleção. Escolha Terra e clique em um ponto para marcar 0 V.",
+                  )}
                 </p>
               </details>
             </section>
           </aside>
         </main>
         <footer className="app-footer">
-          REACTIVE CIRCUIT <span>Desenhe. Conecte. Analise.</span>
+          REACTIVE CIRCUIT <span>{t("Desenhe. Conecte. Analise.")}</span>
         </footer>
       </div>
     </ThemeProvider>

@@ -292,3 +292,10 @@ summary {
     height: 540px;
   }
 }
+
+.header-actions {
+  flex-wrap: wrap;
+}
+.header-actions .MuiTextField-root {
+  min-width: 160px;
+}
