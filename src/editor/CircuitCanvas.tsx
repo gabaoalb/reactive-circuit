@@ -1,4 +1,6 @@
 import { useTranslation } from "react-i18next";
+import { useTheme } from "@mui/material/styles";
+import { circuitColors } from "../theme";
 import { useEffect, useRef, useState } from "react";
 import type { Dispatch } from "react";
 import { Circle, Group, Layer, Line, Stage, Text } from "react-konva";
@@ -29,6 +31,7 @@ const placement = (point: Point): Point => {
   return { x: Math.max(60, position.x), y: Math.max(60, position.y) };
 };
 export function CircuitCanvas({ state, dispatch, result }: Props) {
+  const colors = circuitColors(useTheme().palette);
   const { t } = useTranslation();
   const container = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 800, height: 560 });
@@ -130,24 +133,31 @@ export function CircuitCanvas({ state, dispatch, result }: Props) {
       >
         <Circle
           radius={junction ? 5 : 4}
-          fill={isSelected ? "#e89132" : grounded ? "#0d8b64" : "#fff"}
-          stroke="#176a71"
+          fill={isSelected ? colors.selection : grounded ? colors.ground : colors.background}
+          stroke={colors.terminal}
           strokeWidth={2}
           hitStrokeWidth={16}
           onPointerClick={(event) => pointClick(event, ref)}
         />
         {ref.kind === "terminal" && (
-          <Text x={-14} y={5} text={ref.port} fontSize={9} fill="#7a9293" listening={false} />
+          <Text x={-14} y={5} text={ref.port} fontSize={9} fill={colors.muted} listening={false} />
         )}
         {grounded && (
           <Group listening={false}>
-            <Line points={[0, 7, 0, 16, -10, 16, 10, 16]} stroke="#0d8b64" strokeWidth={2} />
-            <Line points={[-6, 21, 6, 21]} stroke="#0d8b64" strokeWidth={2} />
-            <Line points={[-2, 26, 2, 26]} stroke="#0d8b64" strokeWidth={2} />
+            <Line points={[0, 7, 0, 16, -10, 16, 10, 16]} stroke={colors.ground} strokeWidth={2} />
+            <Line points={[-6, 21, 6, 21]} stroke={colors.ground} strokeWidth={2} />
+            <Line points={[-2, 26, 2, 26]} stroke={colors.ground} strokeWidth={2} />
           </Group>
         )}
         {node !== undefined && (
-          <Text x={8} y={-18} text={`N${node}`} fontSize={11} fill="#0d8b64" listening={false} />
+          <Text
+            x={8}
+            y={-18}
+            text={`N${node}`}
+            fontSize={11}
+            fill={colors.ground}
+            listening={false}
+          />
         )}
       </Group>
     );
@@ -177,7 +187,7 @@ export function CircuitCanvas({ state, dispatch, result }: Props) {
             <Line
               key={`x${x}`}
               points={[x * GRID, 0, x * GRID, height]}
-              stroke="#e6eceb"
+              stroke={colors.grid}
               strokeWidth={0.6}
             />
           ))}
@@ -185,7 +195,7 @@ export function CircuitCanvas({ state, dispatch, result }: Props) {
             <Line
               key={`y${y}`}
               points={[0, y * GRID, width, y * GRID]}
-              stroke="#e6eceb"
+              stroke={colors.grid}
               strokeWidth={0.6}
             />
           ))}
@@ -195,7 +205,7 @@ export function CircuitCanvas({ state, dispatch, result }: Props) {
             <Line
               key={w.id}
               points={wirePath(doc, w)}
-              stroke={selected("wire", w.id) ? "#e89132" : "#39717a"}
+              stroke={selected("wire", w.id) ? colors.selection : colors.wire}
               strokeWidth={selected("wire", w.id) ? 4 : 2}
               hitStrokeWidth={12}
               onPointerClick={(event) => {
@@ -208,7 +218,7 @@ export function CircuitCanvas({ state, dispatch, result }: Props) {
           {draftStart && state.draft && pointer && (
             <Line
               points={orthogonalPath([draftStart, ...state.draft.bends, pointer])}
-              stroke="#e89132"
+              stroke={colors.selection}
               strokeWidth={2}
               dash={[6, 4]}
               listening={false}

@@ -80,5 +80,7 @@
   "diagnostic_matrix": "Sistema lineal inválido.",
   "diagnostic_inconsistent": "Restricciones incompatibles: comprueba fuentes en cortocircuito o tensiones contradictorias.",
   "diagnostic_singular": "El circuito no tiene solución única: comprueba fuentes redundantes y nodos flotantes.",
-  "diagnostic_numerical": "No se pudo obtener una solución numéricamente fiable."
+  "diagnostic_numerical": "No se pudo obtener una solución numéricamente fiable.",
+  "switchToLightTheme": "Activar tema claro",
+  "switchToDarkTheme": "Activar tema oscuro"
 }

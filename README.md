@@ -34,6 +34,8 @@ Em **Ao mover o componente**, escolha **Manter conexões** (padrão) para que os
 
 ## Separação de responsabilidades
 
+A interface usa os temas claro e escuro do Material UI, definidos em `src/theme.ts`, com `ThemeProvider` e `CssBaseline`. O botão no cabeçalho mostra um sol amarelo no tema escuro (ativa o claro) e uma lua azul no tema claro (ativa o escuro). A preferência é salva no `localStorage` como `reactive-circuit.theme`; sem preferência válida, o tema inicial é escuro. Se o armazenamento estiver bloqueado, a alternância continua funcionando durante a sessão. O layout é estilizado pela API `styled` em `src/app/AppShell.tsx`; os painéis, tabelas e opções de conexão usam componentes Material UI. O canvas obtém as cores da mesma paleta, incluindo símbolos, fios, grade, terminais e seleção.
+
 - `src/domain`: documento serializável, componentes, referências de terminais, junções e fios. IDs identificam conexões; coordenadas representam apenas geometria.
 - `src/editor`: reducer com comandos de edição, geometria ortogonal e renderização no canvas. Estado React controla posições e conectividade; não há extração a partir de pixels ou serialização do Konva.
 - `src/simulation`: funções puras, sem React/DOM/canvas, para grafo, validação, MNA, solver e resultados.

@@ -80,5 +80,7 @@
   "diagnostic_matrix": "Invalid linear system.",
   "diagnostic_inconsistent": "Incompatible constraints: check for shorted sources or conflicting voltages.",
   "diagnostic_singular": "The circuit has no unique solution: check redundant sources and floating nodes.",
-  "diagnostic_numerical": "A numerically reliable solution could not be obtained."
+  "diagnostic_numerical": "A numerically reliable solution could not be obtained.",
+  "switchToLightTheme": "Switch to light theme",
+  "switchToDarkTheme": "Switch to dark theme"
 }

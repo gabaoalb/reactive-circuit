@@ -3,11 +3,22 @@ import { useEffect, useReducer, useState } from "react";
 import {
   Alert,
   Button,
-  Chip,
+  IconButton,
+  Tooltip,
   CssBaseline,
   TextField,
   ThemeProvider,
-  createTheme,
+  Paper,
+  FormControl,
+  FormLabel,
+  FormControlLabel,
+  Radio,
+  RadioGroup,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
 } from "@mui/material";
 import type { Component } from "../domain/circuit";
 import { CircuitCanvas } from "../editor/CircuitCanvas";
@@ -15,16 +26,12 @@ import { editorReducer, initialState } from "../editor/state";
 import type { Tool } from "../editor/state";
 import { simulateDc } from "../simulation/mna";
 import type { SimulationOutcome } from "../simulation/mna";
-import "../styles.css";
-
-const theme = createTheme({
-  palette: { primary: { main: "#146b66" }, background: { default: "#f3f6f5" } },
-  typography: {
-    fontFamily: '"Segoe UI", sans-serif',
-    button: { textTransform: "none", fontWeight: 600 },
-  },
-  shape: { borderRadius: 8 },
-});
+import LightModeIcon from "@mui/icons-material/LightMode";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import { blue, yellow } from "@mui/material/colors";
+import { themes } from "../theme";
+import { useThemePreference } from "./useThemePreference";
+import { AppShell } from "./AppShell";
 const tools: { tool: Tool; label: string; icon: string }[] = [
   { tool: "select", label: "Selecionar", icon: "↖" },
   { tool: "resistor", label: "Resistor", icon: "▭" },
@@ -124,72 +131,72 @@ function Results({ result }: { result: SimulationOutcome | null }) {
     <>
       <Alert severity="success">{t("Solução DC encontrada")}</Alert>
       <h3>{t("Tensões dos nós")}</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>{t("Nó")}</th>
-            <th>{t("Tensão")}</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>{t("Nó")}</TableCell>
+            <TableCell>{t("Tensão")}</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
           {result.voltages.map((v, i) => (
-            <tr key={i}>
-              <td>
+            <TableRow key={i}>
+              <TableCell>
                 N{i}
                 {i === 0 ? t("groundSuffix") : ""}
-              </td>
-              <td>{format(v)} V</td>
-            </tr>
+              </TableCell>
+              <TableCell>{format(v)} V</TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
       <h3>
         {t("Componentes")}
         <span>a → b</span>
       </h3>
-      <table>
-        <thead>
-          <tr>
-            <th>{t("Nome")}</th>
-            <th>Va − Vb</th>
-            <th>{t("Corrente")}</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>{t("Nome")}</TableCell>
+            <TableCell>Va − Vb</TableCell>
+            <TableCell>{t("Corrente")}</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
           {result.components.map((c) => (
-            <tr key={c.id}>
-              <td>{c.name}</td>
-              <td>{format(c.voltage)} V</td>
-              <td>{format(c.current)} A</td>
-            </tr>
+            <TableRow key={c.id}>
+              <TableCell>{c.name}</TableCell>
+              <TableCell>{format(c.voltage)} V</TableCell>
+              <TableCell>{format(c.current)} A</TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
       <details>
         <summary>{t("Sistema MNA · A x = b")}</summary>
         <div className="matrix-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>{t("Equação")}</th>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>{t("Equação")}</TableCell>
                 {result.system.unknowns.map((name, i) => (
-                  <th key={i}>{name}</th>
+                  <TableCell key={i}>{name}</TableCell>
                 ))}
-                <th>b</th>
-              </tr>
-            </thead>
-            <tbody>
+                <TableCell>b</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {result.system.A.map((row, i) => (
-                <tr key={i}>
-                  <th>{i + 1}</th>
+                <TableRow key={i}>
+                  <TableCell>{i + 1}</TableCell>
                   {row.map((v, j) => (
-                    <td key={j}>{format(v)}</td>
+                    <TableCell key={j}>{format(v)}</TableCell>
                   ))}
-                  <td>{format(result.system.b[i])}</td>
-                </tr>
+                  <TableCell>{format(result.system.b[i])}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
         <p className="subtle">x = [{result.x.map(format).join(", ")}]</p>
         <p className="subtle">{t("residual", { value: format(result.residual) })}</p>
@@ -203,6 +210,7 @@ function Results({ result }: { result: SimulationOutcome | null }) {
   );
 }
 function App() {
+  const { mode, toggleTheme } = useThemePreference();
   const { t, i18n } = useTranslation();
   const [state, dispatch] = useReducer(editorReducer, undefined, initialState);
   const [analysis, setAnalysis] = useState<{ revision: number; result: SimulationOutcome } | null>(
@@ -231,9 +239,9 @@ function App() {
     return () => window.removeEventListener("keydown", keydown);
   }, []);
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <div className="app-shell">
+    <ThemeProvider theme={themes[mode]}>
+      <CssBaseline enableColorScheme />
+      <AppShell>
         <header className="app-header">
           <div className="brand">
             <span className="brand-mark">⌁</span>
@@ -257,7 +265,20 @@ function App() {
               <option value="en">English</option>
               <option value="es">Español</option>
             </TextField>
-            <Chip label={t("100% no navegador")} size="small" variant="outlined" />
+            <Tooltip title={t(mode === "dark" ? "switchToLightTheme" : "switchToDarkTheme")}>
+              <IconButton
+                onClick={toggleTheme}
+                aria-label={t(mode === "dark" ? "switchToLightTheme" : "switchToDarkTheme")}
+                sx={{
+                  color: mode === "dark" ? yellow[600] : blue[700],
+                  border: 1,
+                  borderColor: "divider",
+                  borderRadius: 2,
+                }}
+              >
+                {mode === "dark" ? <LightModeIcon /> : <DarkModeIcon />}
+              </IconButton>
+            </Tooltip>
             <Button
               variant="contained"
               onClick={() =>
@@ -269,7 +290,7 @@ function App() {
           </div>
         </header>
         <main className="workspace">
-          <section className="editor-panel" aria-label={t("Área de edição")}>
+          <Paper component="section" className="editor-panel" aria-label={t("Área de edição")}>
             <div className="toolbar" role="toolbar" aria-label={t("Ferramentas do circuito")}>
               {tools.map(({ tool, label, icon }) => (
                 <Button
@@ -299,30 +320,34 @@ function App() {
               </span>
               <span>{t("Junções explícitas · cruzamentos não conectam")}</span>
             </footer>
-          </section>
-          <aside className="sidebar">
+          </Paper>
+          <Paper component="aside" className="sidebar">
             <section className="side-section">
-              <fieldset className="move-options">
-                <legend>{t("Ao mover o componente")}</legend>
-                <label>
-                  <input
-                    type="radio"
-                    name="move-connections"
-                    checked={state.moveConnections === "keep"}
-                    onChange={() => dispatch({ type: "move-connections", value: "keep" })}
-                  />{" "}
-                  {t("Manter conexões")}
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="move-connections"
-                    checked={state.moveConnections === "detach"}
-                    onChange={() => dispatch({ type: "move-connections", value: "detach" })}
-                  />{" "}
-                  {t("Desconectar ao mover")}
-                </label>
-              </fieldset>
+              <FormControl className="move-options">
+                <FormLabel id="move-connections-label">{t("Ao mover o componente")}</FormLabel>
+                <RadioGroup
+                  aria-labelledby="move-connections-label"
+                  name="move-connections"
+                  value={state.moveConnections}
+                  onChange={(event) =>
+                    dispatch({
+                      type: "move-connections",
+                      value: event.target.value === "detach" ? "detach" : "keep",
+                    })
+                  }
+                >
+                  <FormControlLabel
+                    value="keep"
+                    control={<Radio size="small" />}
+                    label={t("Manter conexões")}
+                  />
+                  <FormControlLabel
+                    value="detach"
+                    control={<Radio size="small" />}
+                    label={t("Desconectar ao mover")}
+                  />
+                </RadioGroup>
+              </FormControl>
               <p className="subtle">
                 {state.moveConnections === "keep"
                   ? t("Os fios acompanham o movimento do corpo.")
@@ -402,12 +427,12 @@ function App() {
                 </p>
               </details>
             </section>
-          </aside>
+          </Paper>
         </main>
         <footer className="app-footer">
           REACTIVE CIRCUIT <span>{t("Desenhe. Conecte. Analise.")}</span>
         </footer>
-      </div>
+      </AppShell>
     </ThemeProvider>
   );
 }

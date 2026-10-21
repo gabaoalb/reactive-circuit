@@ -1,4 +1,6 @@
 import { useTranslation } from "react-i18next";
+import { useTheme } from "@mui/material/styles";
+import { circuitColors } from "../theme";
 import { Circle, Group, Line, Rect, Text } from "react-konva";
 import type { KonvaEventObject } from "konva/lib/Node";
 import type { Component, Point } from "../domain/circuit";
@@ -14,6 +16,7 @@ interface Props {
 
 /** Fixed-size symbol centered between two terminals, with variable-length leads. */
 export function ComponentShape({ component, selected, draggable, onSelect, onMove }: Props) {
+  const colors = circuitColors(useTheme().palette);
   const { i18n } = useTranslation();
   const value = new Intl.NumberFormat(i18n.resolvedLanguage, {
     maximumSignificantDigits: 6,
@@ -46,18 +49,18 @@ export function ComponentShape({ component, selected, draggable, onSelect, onMov
           height={54}
           fill="rgba(0,0,0,0)"
           cornerRadius={8}
-          stroke={selected ? "#e89132" : undefined}
+          stroke={selected ? colors.selection : undefined}
           strokeWidth={1}
         />
         <Line
           points={[-halfLength, 0, -24, 0]}
-          stroke="#173f48"
+          stroke={colors.symbol}
           strokeWidth={2}
           hitStrokeWidth={10}
         />
         <Line
           points={[24, 0, halfLength, 0]}
-          stroke="#173f48"
+          stroke={colors.symbol}
           strokeWidth={2}
           hitStrokeWidth={10}
         />
@@ -67,15 +70,15 @@ export function ComponentShape({ component, selected, draggable, onSelect, onMov
             y={-10}
             width={48}
             height={20}
-            stroke="#173f48"
+            stroke={colors.symbol}
             strokeWidth={2}
-            fill="#fafcfb"
+            fill={colors.background}
           />
         ) : (
           <>
-            <Circle radius={23} stroke="#173f48" strokeWidth={2} fill="#fafcfb" />
-            <Text x={-18} y={-7} text="+" fontSize={16} fill="#173f48" />
-            <Text x={9} y={-7} text="−" fontSize={16} fill="#173f48" />
+            <Circle radius={23} stroke={colors.symbol} strokeWidth={2} fill={colors.background} />
+            <Text x={-18} y={-7} text="+" fontSize={16} fill={colors.symbol} />
+            <Text x={9} y={-7} text="−" fontSize={16} fill={colors.symbol} />
           </>
         )}
       </Group>
@@ -85,7 +88,7 @@ export function ComponentShape({ component, selected, draggable, onSelect, onMov
         text={`${component.name}\n${value} ${component.kind === "resistor" ? "Ω" : "V"}`}
         fontSize={12}
         lineHeight={1.4}
-        fill="#173f48"
+        fill={colors.symbol}
         listening={false}
       />
     </Group>
