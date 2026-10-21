@@ -387,7 +387,7 @@ function App() {
                   wires: state.document.wires.length,
                 })}
               </span>
-              <span>{t("Junções explícitas · cruzamentos não conectam")}</span>
+              <span>{t("directContactsHint")}</span>
             </footer>
           </Paper>
           <Paper component="aside" className="sidebar">
@@ -558,11 +558,7 @@ function App() {
               <p className="subtle">{t("timeStepHelp")}</p>
               <details>
                 <summary>{t("Ajuda de conexão")}</summary>
-                <p className="subtle">
-                  {t(
-                    "As duas portas de cada símbolo são a e b, respectivamente à esquerda e à direita antes da rotação. Para ramificar, coloque uma junção e termine cada fio nela. Pontas sobrepostas não conectam automaticamente.",
-                  )}
-                </p>
+                <p className="subtle">{t("directContactsHelp")}</p>
                 <p className="subtle">
                   {t(
                     "Escape cancela a ferramenta. Delete exclui a seleção. Escolha Terra e clique em um ponto para marcar 0 V.",

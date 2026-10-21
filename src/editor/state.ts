@@ -1,6 +1,6 @@
-import { emptyCircuit, exampleCircuit, rlcCircuit, pointKey } from "../domain/circuit";
+import { emptyCircuit, exampleCircuit, rlcCircuit, pointKey, terminal } from "../domain/circuit";
 import type { CircuitDocument, Component, ConnectionPointRef, Point } from "../domain/circuit";
-import { detachComponent } from "./connections";
+import { connectOverlappingPoints, detachComponent } from "./connections";
 import { resizeComponent } from "./geometry";
 export type MoveConnections = "keep" | "detach";
 export type Tool = "select" | Component["kind"] | "wire" | "junction" | "ground";
@@ -32,6 +32,7 @@ export type EditorAction =
   | { type: "move"; selection: Selection; position: Point }
   | { type: "move-terminal"; componentId: string; port: "a" | "b"; position: Point }
   | { type: "move-connections"; value: MoveConnections }
+  | { type: "connect-overlaps"; refs: ConnectionPointRef[] }
   | { type: "rotate" }
   | { type: "value"; id: string; value: number }
   | { type: "initial-value"; id: string; value: number }
@@ -71,16 +72,26 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       };
     case "add-component":
       return {
-        ...update({ ...doc, components: [...doc.components, action.component] }),
+        ...update(
+          connectOverlappingPoints({ ...doc, components: [...doc.components, action.component] }, [
+            terminal(action.component.id, "a"),
+            terminal(action.component.id, "b"),
+          ]),
+        ),
         selection: { kind: "component", id: action.component.id },
         tool: "select",
       };
     case "add-junction":
       return {
-        ...update({
-          ...doc,
-          junctions: [...doc.junctions, { id: action.id, position: action.position }],
-        }),
+        ...update(
+          connectOverlappingPoints(
+            {
+              ...doc,
+              junctions: [...doc.junctions, { id: action.id, position: action.position }],
+            },
+            [{ kind: "junction", id: action.id }],
+          ),
+        ),
         selection: { kind: "junction", id: action.id },
         tool: "select",
       };
@@ -123,14 +134,23 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
         components: connectedDoc.components.map((c) => (c.id === component.id ? resized : c)),
       });
     }
+    case "connect-overlaps": {
+      const connected = connectOverlappingPoints(doc, action.refs);
+      return connected === doc ? state : update(connected);
+    }
     case "rotate":
       return state.selection?.kind === "component"
-        ? update({
-            ...doc,
-            components: doc.components.map((c) =>
-              c.id === state.selection?.id ? { ...c, rotation: (c.rotation + 90) % 360 } : c,
+        ? update(
+            connectOverlappingPoints(
+              {
+                ...doc,
+                components: doc.components.map((c) =>
+                  c.id === state.selection?.id ? { ...c, rotation: (c.rotation + 90) % 360 } : c,
+                ),
+              },
+              [terminal(state.selection.id, "a"), terminal(state.selection.id, "b")],
             ),
-          })
+          )
         : state;
     case "value":
       return update({
@@ -185,22 +205,30 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
           ref.componentId === selection.id) ||
         (selection.kind === "junction" && ref.kind === "junction" && ref.id === selection.id);
       return {
-        ...update({
-          ...doc,
-          components: doc.components.filter(
-            (c) => selection.kind !== "component" || c.id !== selection.id,
+        ...update(
+          connectOverlappingPoints(
+            {
+              ...doc,
+              components: doc.components.filter(
+                (c) => selection.kind !== "component" || c.id !== selection.id,
+              ),
+              junctions: doc.junctions.filter(
+                (j) => selection.kind !== "junction" || j.id !== selection.id,
+              ),
+              wires: doc.wires.filter(
+                (w) =>
+                  !(selection.kind === "wire" && w.id === selection.id) &&
+                  !removed(w.from) &&
+                  !removed(w.to),
+              ),
+              ground: doc.ground && removed(doc.ground) ? null : doc.ground,
+            },
+            doc.wires
+              .filter((w) => removed(w.from) || removed(w.to))
+              .flatMap((w) => [w.from, w.to])
+              .filter((ref) => !removed(ref)),
           ),
-          junctions: doc.junctions.filter(
-            (j) => selection.kind !== "junction" || j.id !== selection.id,
-          ),
-          wires: doc.wires.filter(
-            (w) =>
-              !(selection.kind === "wire" && w.id === selection.id) &&
-              !removed(w.from) &&
-              !removed(w.to),
-          ),
-          ground: doc.ground && removed(doc.ground) ? null : doc.ground,
-        }),
+        ),
         selection: null,
         draft: null,
       };

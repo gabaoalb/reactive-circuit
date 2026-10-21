@@ -13,6 +13,7 @@ interface Props {
   draggable: boolean;
   onSelect: () => void;
   onMove: (position: Point) => void;
+  onMoveEnd: () => void;
   onToggle: () => void;
 }
 
@@ -23,6 +24,7 @@ export function ComponentShape({
   draggable,
   onSelect,
   onMove,
+  onMoveEnd,
   onToggle,
 }: Props) {
   const colors = circuitColors(useTheme().palette);
@@ -52,7 +54,10 @@ export function ComponentShape({
       }}
       onDragStart={onSelect}
       onDragMove={move}
-      onDragEnd={move}
+      onDragEnd={(event) => {
+        move(event);
+        onMoveEnd();
+      }}
     >
       <Group rotation={component.rotation}>
         <Rect

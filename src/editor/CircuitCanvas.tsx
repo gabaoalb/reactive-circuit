@@ -109,6 +109,9 @@ export function CircuitCanvas({ state, dispatch, result }: Props) {
     const grounded = doc.ground && pointKey(doc.ground) === key;
     const node = result?.ok ? result.graph.pointNodes[key] : undefined;
     const isSelected = ref.kind === "junction" && selected("junction", ref.id);
+    const connected = doc.wires.some(
+      (wire) => pointKey(wire.from) === key || pointKey(wire.to) === key,
+    );
     const drag = (event: KonvaEventObject<DragEvent>) => {
       event.cancelBubble = true;
       if (ref.kind === "junction") {
@@ -140,11 +143,22 @@ export function CircuitCanvas({ state, dispatch, result }: Props) {
           });
         }}
         onDragMove={drag}
-        onDragEnd={drag}
+        onDragEnd={(event) => {
+          drag(event);
+          dispatch({ type: "connect-overlaps", refs: [ref] });
+        }}
       >
         <Circle
           radius={junction ? 5 : 4}
-          fill={isSelected ? colors.selection : grounded ? colors.ground : colors.background}
+          fill={
+            isSelected
+              ? colors.selection
+              : grounded
+                ? colors.ground
+                : connected
+                  ? colors.wire
+                  : colors.background
+          }
           stroke={colors.terminal}
           strokeWidth={2}
           hitStrokeWidth={16}
@@ -179,9 +193,7 @@ export function CircuitCanvas({ state, dispatch, result }: Props) {
       className={`canvas-container tool-${state.tool}`}
       ref={container}
       role="region"
-      aria-label={t(
-        "Editor de circuito. Use as ferramentas e clique na grade; fios conectam terminais ou junções explícitas.",
-      )}
+      aria-label={t("directContactsEditorLabel")}
     >
       <Stage
         width={width}
@@ -248,6 +260,12 @@ export function CircuitCanvas({ state, dispatch, result }: Props) {
                 dispatch({ type: "move", selection: { kind: "component", id: c.id }, position })
               }
               onToggle={() => dispatch({ type: "toggle-switch", id: c.id })}
+              onMoveEnd={() =>
+                dispatch({
+                  type: "connect-overlaps",
+                  refs: [terminal(c.id, "a"), terminal(c.id, "b")],
+                })
+              }
             />
           ))}
         </Layer>

@@ -33,6 +33,7 @@ Construir um simulador de circuitos elétricos 100% web com React e TypeScript. 
 - Use i18n para novos textos visíveis, incluindo rótulos acessíveis e diagnósticos; mantenha as três traduções atualizadas. Não introduza dependências de tradução no motor elétrico puro.
 - Tema e idioma são preferências persistidas em `localStorage`; o circuito continua apenas em memória. A interface deve funcionar mesmo quando o armazenamento estiver indisponível.
 - Ao mover o corpo ou arrastar terminais, respeite a opção de manter ou desconectar conexões. Arrastar um terminal mantém a outra ponta fixa e o símbolo com tamanho constante. Ao desconectar, preserve os fios e o terra nas posições antigas por meio de junções; ao mover só uma ponta, desconecte apenas essa ponta.
+- Ao inserir, girar ou soltar um componente ou terminal, conecte pontas coincidentes no mesmo ponto da grade por referências explícitas de IDs. Contatos diretos também respeitam manter/desconectar ao mover. Não conecte pontos apenas atravessados durante o arraste, proximidades ou cruzamentos de fios; o motor não deve inferir conexões por coordenadas.
 
 ## Verificação
 
