@@ -8,6 +8,8 @@ export type Component = {
   value: number;
   position: Point;
   rotation: number;
+  /** Distance between terminals in canvas pixels. Symbol size stays fixed. */
+  length?: number;
 } & ({ kind: "resistor" } | { kind: "voltage" });
 export type ConnectionPointRef =
   | { kind: "terminal"; componentId: string; port: "a" | "b" }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Dispatch } from "react";
-import { Circle, Group, Layer, Line, Rect, Stage, Text } from "react-konva";
+import { Circle, Group, Layer, Line, Stage, Text } from "react-konva";
 import type { KonvaEventObject } from "konva/lib/Node";
 import { pointKey, terminal } from "../domain/circuit";
 import type { ConnectionPointRef, Point } from "../domain/circuit";
@@ -10,10 +10,12 @@ import {
   GRID,
   orthogonalPath,
   snap,
+  resizeComponent,
   terminalPosition,
   wirePath,
 } from "./geometry";
 import type { EditorAction, EditorState } from "./state";
+import { ComponentShape } from "./ComponentShape";
 
 interface Props {
   state: EditorState;
@@ -31,7 +33,7 @@ export function CircuitCanvas({ state, dispatch, result }: Props) {
   const [pointer, setPointer] = useState<Point | null>(null);
   const doc = state.document;
   const extents = [
-    ...doc.components.map((c) => c.position),
+    ...doc.components.flatMap((c) => [terminalPosition(c, "a"), terminalPosition(c, "b")]),
     ...doc.junctions.map((j) => j.position),
     ...doc.wires.flatMap((w) => w.bends),
   ];
@@ -91,31 +93,38 @@ export function CircuitCanvas({ state, dispatch, result }: Props) {
     const grounded = doc.ground && pointKey(doc.ground) === key;
     const node = result?.ok ? result.graph.pointNodes[key] : undefined;
     const isSelected = ref.kind === "junction" && selected("junction", ref.id);
+    const drag = (event: KonvaEventObject<DragEvent>) => {
+      event.cancelBubble = true;
+      if (ref.kind === "junction") {
+        const position = placement(event.target.position());
+        event.target.position(position);
+        dispatch({ type: "move", selection: { kind: "junction", id: ref.id }, position });
+      } else {
+        const component = doc.components.find((c) => c.id === ref.componentId);
+        if (!component) return;
+        const resized = resizeComponent(component, ref.port, placement(event.target.position()));
+        const position = terminalPosition(resized, ref.port);
+        event.target.position(position);
+        dispatch({ type: "move-terminal", componentId: ref.componentId, port: ref.port, position });
+      }
+    };
     return (
       <Group
         key={key}
         x={position.x}
         y={position.y}
-        draggable={junction && state.tool === "select"}
+        draggable={state.tool === "select"}
         onDragStart={() => {
-          if (ref.kind === "junction")
-            dispatch({ type: "select", selection: { kind: "junction", id: ref.id } });
+          dispatch({
+            type: "select",
+            selection:
+              ref.kind === "junction"
+                ? { kind: "junction", id: ref.id }
+                : { kind: "component", id: ref.componentId },
+          });
         }}
-        onDragMove={(event) => {
-          if (ref.kind === "junction")
-            dispatch({
-              type: "move",
-              selection: { kind: "junction", id: ref.id },
-              position: placement(event.target.position()),
-            });
-        }}
-        onDragEnd={(event) => {
-          if (ref.kind === "junction") {
-            const position = placement(event.target.position());
-            event.target.position(position);
-            dispatch({ type: "move", selection: { kind: "junction", id: ref.id }, position });
-          }
-        }}
+        onDragMove={drag}
+        onDragEnd={drag}
       >
         <Circle
           radius={junction ? 5 : 4}
@@ -202,73 +211,18 @@ export function CircuitCanvas({ state, dispatch, result }: Props) {
             />
           )}
           {doc.components.map((c) => (
-            <Group
+            <ComponentShape
               key={c.id}
-              x={c.position.x}
-              y={c.position.y}
+              component={c}
+              selected={selected("component", c.id)}
               draggable={state.tool === "select"}
-              onPointerClick={(event) => {
-                event.cancelBubble = true;
-                if (state.tool === "select")
-                  dispatch({ type: "select", selection: { kind: "component", id: c.id } });
-              }}
-              onDragStart={() =>
+              onSelect={() =>
                 dispatch({ type: "select", selection: { kind: "component", id: c.id } })
               }
-              onDragMove={(event) =>
-                dispatch({
-                  type: "move",
-                  selection: { kind: "component", id: c.id },
-                  position: placement(event.target.position()),
-                })
+              onMove={(position) =>
+                dispatch({ type: "move", selection: { kind: "component", id: c.id }, position })
               }
-              onDragEnd={(event) => {
-                const position = placement(event.target.position());
-                event.target.position(position);
-                dispatch({ type: "move", selection: { kind: "component", id: c.id }, position });
-              }}
-            >
-              <Group rotation={c.rotation}>
-                <Rect
-                  x={-44}
-                  y={-25}
-                  width={88}
-                  height={50}
-                  fill="rgba(0,0,0,0)"
-                  cornerRadius={8}
-                  stroke={selected("component", c.id) ? "#e89132" : undefined}
-                  strokeWidth={1}
-                />
-                <Line points={[-40, 0, -24, 0]} stroke="#173f48" strokeWidth={2} />
-                <Line points={[24, 0, 40, 0]} stroke="#173f48" strokeWidth={2} />
-                {c.kind === "resistor" ? (
-                  <Rect
-                    x={-24}
-                    y={-10}
-                    width={48}
-                    height={20}
-                    stroke="#173f48"
-                    strokeWidth={2}
-                    fill="#fafcfb"
-                  />
-                ) : (
-                  <>
-                    <Circle radius={23} stroke="#173f48" strokeWidth={2} fill="#fafcfb" />
-                    <Text x={-18} y={-7} text="+" fontSize={16} fill="#173f48" />
-                    <Text x={9} y={-7} text="−" fontSize={16} fill="#173f48" />
-                  </>
-                )}
-              </Group>
-              <Text
-                x={c.rotation % 180 ? 32 : -35}
-                y={c.rotation % 180 ? -16 : -45}
-                text={`${c.name}\n${c.value} ${c.kind === "resistor" ? "Ω" : "V"}`}
-                fontSize={12}
-                lineHeight={1.4}
-                fill="#173f48"
-                listening={false}
-              />
-            </Group>
+            />
           ))}
         </Layer>
         <Layer>

@@ -1,5 +1,8 @@
 import { emptyCircuit, exampleCircuit, pointKey } from "../domain/circuit";
 import type { CircuitDocument, Component, ConnectionPointRef, Point } from "../domain/circuit";
+import { detachComponent } from "./connections";
+import { resizeComponent } from "./geometry";
+export type MoveConnections = "keep" | "detach";
 export type Tool = "select" | "resistor" | "voltage" | "wire" | "junction" | "ground";
 export type Selection = { kind: "component" | "wire" | "junction"; id: string };
 export interface EditorState {
@@ -8,6 +11,7 @@ export interface EditorState {
   selection: Selection | null;
   draft: { from: ConnectionPointRef; bends: Point[] } | null;
   revision: number;
+  moveConnections: MoveConnections;
 }
 export const initialState = (): EditorState => ({
   document: exampleCircuit(),
@@ -15,6 +19,7 @@ export const initialState = (): EditorState => ({
   selection: null,
   draft: null,
   revision: 0,
+  moveConnections: "keep",
 });
 export type EditorAction =
   | { type: "tool"; tool: Tool }
@@ -23,6 +28,8 @@ export type EditorAction =
   | { type: "add-component"; component: Component }
   | { type: "add-junction"; id: string; position: Point }
   | { type: "move"; selection: Selection; position: Point }
+  | { type: "move-terminal"; componentId: string; port: "a" | "b"; position: Point }
+  | { type: "move-connections"; value: MoveConnections }
   | { type: "rotate" }
   | { type: "value"; id: string; value: number }
   | { type: "point"; ref: ConnectionPointRef; wireId: string }
@@ -37,6 +44,8 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
     revision: state.revision + 1,
   });
   switch (action.type) {
+    case "move-connections":
+      return { ...state, moveConnections: action.value };
     case "tool":
       return { ...state, tool: action.tool, draft: null };
     case "select":
@@ -48,6 +57,7 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
         ...initialState(),
         document: action.example ? exampleCircuit() : emptyCircuit(),
         revision: state.revision + 1,
+        moveConnections: state.moveConnections,
       };
     case "add-component":
       return {
@@ -64,20 +74,45 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
         selection: { kind: "junction", id: action.id },
         tool: "select",
       };
-    case "move":
+    case "move": {
+      const component =
+        action.selection.kind === "component"
+          ? doc.components.find((c) => c.id === action.selection.id)
+          : undefined;
+      if (
+        component &&
+        component.position.x === action.position.x &&
+        component.position.y === action.position.y
+      )
+        return state;
+      const connectedDoc =
+        component && state.moveConnections === "detach" ? detachComponent(doc, component) : doc;
       return update({
-        ...doc,
-        components: doc.components.map((c) =>
+        ...connectedDoc,
+        components: connectedDoc.components.map((c) =>
           action.selection.kind === "component" && c.id === action.selection.id
             ? { ...c, position: action.position }
             : c,
         ),
-        junctions: doc.junctions.map((j) =>
+        junctions: connectedDoc.junctions.map((j) =>
           action.selection.kind === "junction" && j.id === action.selection.id
             ? { ...j, position: action.position }
             : j,
         ),
       });
+    }
+    case "move-terminal": {
+      const component = doc.components.find((c) => c.id === action.componentId);
+      if (!component) return state;
+      const resized = resizeComponent(component, action.port, action.position);
+      if (resized === component) return state;
+      const connectedDoc =
+        state.moveConnections === "detach" ? detachComponent(doc, component, [action.port]) : doc;
+      return update({
+        ...connectedDoc,
+        components: connectedDoc.components.map((c) => (c.id === component.id ? resized : c)),
+      });
+    }
     case "rotate":
       return state.selection?.kind === "component"
         ? update({

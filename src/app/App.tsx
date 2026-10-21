@@ -33,7 +33,8 @@ const tools: { tool: Tool; label: string; icon: string }[] = [
   { tool: "ground", label: "Terra", icon: "⏚" },
 ];
 const instructions: Record<Tool, string> = {
-  select: "Clique para selecionar. Arraste para mover; Delete exclui a seleção.",
+  select:
+    "Arraste o corpo para mover ou um terminal para esticar. A outra ponta fica fixa; Delete exclui a seleção.",
   resistor: "Clique na grade para adicionar um resistor de 1 kΩ.",
   voltage: "Clique na grade para adicionar uma fonte ideal de 5 V. Porta a = +; porta b = −.",
   wire: "Clique em um terminal ou junção, na grade para cotovelos e em outro terminal para concluir. Escape cancela.",
@@ -92,7 +93,7 @@ function Properties({
           ? "a (+) → b (−). Corrente positiva de a para b."
           : "Tensão Va − Vb; corrente positiva de a para b."}
       </p>
-      <p className="subtle">Rotação: {component.rotation}°</p>
+      <p className="subtle">Rotação: {Number(component.rotation.toFixed(2))}°</p>
     </form>
   );
 }
@@ -275,6 +276,37 @@ function App() {
             </footer>
           </section>
           <aside className="sidebar">
+            <section className="side-section">
+              <fieldset className="move-options">
+                <legend>Ao mover o componente</legend>
+                <label>
+                  <input
+                    type="radio"
+                    name="move-connections"
+                    checked={state.moveConnections === "keep"}
+                    onChange={() => dispatch({ type: "move-connections", value: "keep" })}
+                  />{" "}
+                  Manter conexões
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="move-connections"
+                    checked={state.moveConnections === "detach"}
+                    onChange={() => dispatch({ type: "move-connections", value: "detach" })}
+                  />{" "}
+                  Desconectar ao mover
+                </label>
+              </fieldset>
+              <p className="subtle">
+                {state.moveConnections === "keep"
+                  ? "Os fios acompanham o movimento do corpo."
+                  : "Os fios ficam no lugar, com junções nas pontas antigas."}{" "}
+                {state.moveConnections === "keep"
+                  ? "Arrastar um terminal também mantém suas conexões."
+                  : "Arrastar um terminal desconecta apenas a ponta movida."}
+              </p>
+            </section>
             <section className="side-section">
               <h2>Propriedades</h2>
               {component ? (
