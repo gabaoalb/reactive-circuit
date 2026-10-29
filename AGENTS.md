@@ -50,6 +50,10 @@ Construir um simulador de circuitos elétricos 100% web com React e TypeScript. 
 - Selecione a correspondência mais relevante e confiável, usando uma versão específica quando solicitada; depois execute `query-docs` com a pergunta completa.
 - Não é necessário consultar Context7 para refatorações puras, lógica de negócio, revisão de código ou conceitos gerais de programação.
 
+## Commits
+
+- Não crie commits sem solicitação explícita do usuário. Pedidos de implementação, correção ou transferência de alterações para a `main` não autorizam commits por si só; mantenha as alterações sem commit até que isso seja pedido.
+
 ## Comunicação
 
 - Comunique-se em português, salvo solicitação diferente.
